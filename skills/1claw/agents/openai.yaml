@@ -1,0 +1,11 @@
+interface:
+  display_name: "1Claw"
+  short_description: "Use 1Claw vault secrets and signing safely"
+  default_prompt: "Use $1claw to discover, fetch, store, rotate, or share secrets with the 1Claw vault without exposing secret values in context."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "1claw"
+      description: "1Claw MCP server for vault secrets and transaction tooling"
+      transport: "streamable_http"
+      url: "https://mcp.1claw.xyz/mcp"

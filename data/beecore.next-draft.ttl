@@ -1,0 +1,165 @@
+@base <https://yourdomain.tld/ontologies/beecore#> .
+@prefix beecore: <https://yourdomain.tld/ontologies/beecore#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+beecore:BeeCoreNextDraft a owl:Ontology ;
+  rdfs:label "BeeCore next draft overlay" ;
+  owl:versionInfo "0.4.0-draft" ;
+  dcterms:description "Additive draft overlay for BeeCore based on corpus term scans performed on 2026-03-28. This file is not applied to the live runtime yet." .
+
+##########
+# Classes
+##########
+
+beecore:SupplementalFeed a owl:Class ;
+  rdfs:label "Supplemental feed" ;
+  skos:altLabel "artificial feed" .
+
+beecore:SugarSyrup a owl:Class ;
+  rdfs:subClassOf beecore:SupplementalFeed ;
+  rdfs:label "Sugar syrup" ;
+  skos:altLabel "syrup feed" .
+
+beecore:CandyFeed a owl:Class ;
+  rdfs:subClassOf beecore:SupplementalFeed ;
+  rdfs:label "Candy feed" ;
+  skos:altLabel "candy" ;
+  skos:altLabel "winter candy" .
+
+beecore:BeeBread a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Bee bread" .
+
+beecore:SectionHoney a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Section honey" ;
+  skos:altLabel "section comb honey" .
+
+beecore:BroodNest a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Brood nest" .
+
+beecore:DroneComb a owl:Class ;
+  rdfs:subClassOf beecore:Comb ;
+  rdfs:label "Drone comb" .
+
+beecore:QueenCup a owl:Class ;
+  rdfs:subClassOf beecore:CombCell ;
+  rdfs:label "Queen cup" ;
+  skos:altLabel "play cup" .
+
+beecore:SectionBox a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Section box" ;
+  skos:altLabel "section crate" .
+
+beecore:BeeEscape a owl:Class ;
+  rdfs:subClassOf beecore:Equipment ;
+  rdfs:label "Bee escape" ;
+  skos:altLabel "escape board" .
+
+beecore:HoneyHouse a owl:Class ;
+  rdfs:subClassOf beecore:ApiarySite ;
+  rdfs:label "Honey house" ;
+  skos:altLabel "extracting room" .
+
+beecore:BeeSpace a owl:Class ;
+  rdfs:label "Bee space" .
+
+beecore:ColonyProcess a owl:Class ;
+  rdfs:label "Colony process" .
+
+beecore:HoneyFlow a owl:Class ;
+  rdfs:subClassOf beecore:ColonyProcess ;
+  rdfs:label "Honey flow" ;
+  skos:altLabel "nectar flow" .
+
+beecore:RobbingEvent a owl:Class ;
+  rdfs:subClassOf beecore:ColonyProcess ;
+  rdfs:label "Robbing" ;
+  skos:altLabel "robbing event" .
+
+beecore:AbscondingEvent a owl:Class ;
+  rdfs:subClassOf beecore:ColonyProcess ;
+  rdfs:label "Absconding" ;
+  skos:altLabel "abscond" .
+
+beecore:SupersedureEvent a owl:Class ;
+  rdfs:subClassOf beecore:ColonyProcess ;
+  rdfs:label "Supersedure" .
+
+beecore:OrientationFlight a owl:Class ;
+  rdfs:subClassOf beecore:ColonyProcess ;
+  rdfs:label "Orientation flight" .
+
+beecore:MatingFlight a owl:Class ;
+  rdfs:subClassOf beecore:ColonyProcess ;
+  rdfs:label "Mating flight" .
+
+beecore:VentilationManagement a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Ventilation management" ;
+  skos:altLabel "ventilation" ;
+  skos:altLabel "hive ventilation" .
+
+beecore:PreventingRobbing a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Preventing robbing" ;
+  skos:altLabel "robbing prevention" .
+
+##########
+# Properties
+##########
+
+beecore:feedsWith a owl:ObjectProperty ;
+  rdfs:label "feeds with" ;
+  rdfs:domain beecore:Feeding ;
+  rdfs:range beecore:SupplementalFeed .
+
+beecore:usesComponent a owl:ObjectProperty ;
+  rdfs:label "uses component" ;
+  rdfs:domain beecore:ManagementAction ;
+  rdfs:range beecore:HiveComponent .
+
+beecore:occupiesBroodNest a owl:ObjectProperty ;
+  rdfs:label "occupies brood nest" ;
+  rdfs:domain beecore:Colony ;
+  rdfs:range beecore:BroodNest .
+
+beecore:storesResource a owl:ObjectProperty ;
+  rdfs:label "stores resource" ;
+  rdfs:domain beecore:Comb ;
+  rdfs:range beecore:ForageResource .
+
+beecore:maintainsBeeSpace a owl:ObjectProperty ;
+  rdfs:label "maintains bee space" ;
+  rdfs:domain beecore:ManagementAction ;
+  rdfs:range beecore:BeeSpace .
+
+beecore:occursInColony a owl:ObjectProperty ;
+  rdfs:label "occurs in colony" ;
+  rdfs:domain beecore:ColonyProcess ;
+  rdfs:range beecore:Colony .
+
+beecore:occursDuringSeason a owl:ObjectProperty ;
+  rdfs:label "occurs during season" ;
+  rdfs:domain beecore:ColonyProcess ;
+  rdfs:range beecore:Season .
+
+beecore:involvesBeeType a owl:ObjectProperty ;
+  rdfs:label "involves bee type" ;
+  rdfs:domain beecore:ColonyProcess ;
+  rdfs:range beecore:Bee .
+
+##########
+# Datatype properties
+##########
+
+beecore:hasPreferredGapInMillimeters a owl:DatatypeProperty ;
+  rdfs:label "has preferred gap in millimeters" ;
+  rdfs:domain beecore:BeeSpace ;
+  rdfs:range xsd:decimal .

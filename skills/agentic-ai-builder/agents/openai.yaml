@@ -1,0 +1,4 @@
+version: 1
+display_name: Agentic AI Builder
+short_description: Turn workflows into practical AI agents with opportunity scoring, SPAR design, guardrails, memory, and rollout plans.
+default_prompt: Design or implement an agentic AI system for this workflow. First score whether it is a good agent opportunity, then define the agent boundary, SPAR design, tools, memory, guardrails, testing, and rollout plan.

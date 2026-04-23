@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hive Selector Preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #170f08;
+      --bg-soft: #23150a;
+      --panel: rgba(41, 24, 11, 0.84);
+      --panel-strong: rgba(56, 33, 14, 0.92);
+      --panel-glass: rgba(31, 18, 10, 0.72);
+      --line: rgba(255, 204, 92, 0.14);
+      --line-strong: rgba(255, 204, 92, 0.28);
+      --text: #fdf2d5;
+      --muted: #d9c29b;
+      --accent: #ffbf3d;
+      --accent-deep: #d98a1f;
+      --accent-soft: #ffe08f;
+      --sage: #83b37d;
+      --warn: #ff8b5f;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+      --radius-xl: 32px;
+      --radius-lg: 28px;
+      --radius-md: 20px;
+      --radius-sm: 14px;
+      --body-font: "Trebuchet MS", "Segoe UI Variable", sans-serif;
+      --title-font: "Rockwell", "Book Antiqua", "Palatino Linotype", serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      color: var(--text);
+      font-family: var(--body-font);
+      background:
+        radial-gradient(circle at top left, rgba(255, 191, 61, 0.24), transparent 28%),
+        radial-gradient(circle at 88% 14%, rgba(131, 179, 125, 0.16), transparent 22%),
+        radial-gradient(circle at bottom right, rgba(217, 138, 31, 0.22), transparent 26%),
+        linear-gradient(180deg, #140d07 0%, #1e1208 52%, #160d07 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.2;
+      background-image:
+        linear-gradient(30deg, rgba(255, 191, 61, 0.08) 12%, transparent 12.5%, transparent 87%, rgba(255, 191, 61, 0.08) 87.5%, rgba(255, 191, 61, 0.08)),
+        linear-gradient(150deg, rgba(255, 191, 61, 0.08) 12%, transparent 12.5%, transparent 87%, rgba(255, 191, 61, 0.08) 87.5%, rgba(255, 191, 61, 0.08)),
+        linear-gradient(90deg, rgba(255, 191, 61, 0.08) 2%, transparent 2.5%, transparent 97%, rgba(255, 191, 61, 0.08) 97.5%, rgba(255, 191, 61, 0.08));
+      background-size: 90px 156px;
+      background-position: 0 0, 0 0, 45px 78px;
+    }
+
+    .page-shell {
+      min-height: 100vh;
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 320px;
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, var(--panel), var(--panel-glass));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .side-rail,
+    .context-rail {
+      padding: 1.2rem;
+      display: grid;
+      gap: 1rem;
+      align-content: start;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+    }
+
+    .brand-badge {
+      width: 50px;
+      height: 50px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 191, 61, 0.3);
+      background: linear-gradient(135deg, rgba(255, 191, 61, 0.18), rgba(217, 138, 31, 0.14));
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .brand h1,
+    .hero h2,
+    .section-title,
+    .context-card h3 {
+      font-family: var(--title-font);
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+    }
+
+    .brand p,
+    .muted {
+      color: var(--muted);
+    }
+
+    .workflow,
+    .recent-list,
+    .context-stack,
+    .quick-facts {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .workflow-step,
+    .recent-item,
+    .context-card,
+    .fact-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: rgba(17, 10, 5, 0.46);
+      padding: 1rem;
+    }
+
+    .workflow-step strong,
+    .section-tag {
+      color: var(--accent-soft);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .workflow-step p,
+    .recent-item p,
+    .context-card p,
+    .fact-card p,
+    .hero p,
+    .location-card p,
+    .hive-card p {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 0.92rem;
+    }
+
+    .recent-item strong {
+      display: block;
+      font-size: 0.98rem;
+    }
+
+    .recent-item.active,
+    .location-card.active,
+    .hive-card.active {
+      border-color: rgba(255, 191, 61, 0.42);
+      background:
+        radial-gradient(circle at top right, rgba(255, 224, 143, 0.12), transparent 34%),
+        rgba(27, 15, 8, 0.8);
+    }
+
+    .main-stage {
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    .hero {
+      padding: 1.4rem 1.5rem;
+      display: grid;
+      gap: 1rem;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -8% -26% auto;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 191, 61, 0.16), transparent 68%);
+      pointer-events: none;
+    }
+
+    .hero h2 {
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.02;
+      max-width: 10ch;
+    }
+
+    .hero p {
+      max-width: 64ch;
+      font-size: 1rem;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.6rem 0.9rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      font-size: 0.86rem;
+    }
+
+    .selection-grid {
+      display: grid;
+      grid-template-columns: 1.08fr 1fr;
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    .selector-panel {
+      padding: 1.2rem;
+      display: grid;
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    .selector-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: end;
+    }
+
+    .section-title {
+      font-size: 1.45rem;
+      line-height: 1.1;
+    }
+
+    .section-subtitle {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-top: 0.35rem;
+    }
+
+    .ghost-input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(17, 10, 5, 0.68);
+      color: var(--text);
+      padding: 0.95rem 1rem;
+      outline: none;
+    }
+
+    .location-list,
+    .hive-grid {
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .location-card,
+    .hive-card {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(17, 10, 5, 0.54);
+      padding: 1.1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .location-card::before,
+    .hive-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.18;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle at 25% 25%, rgba(255, 191, 61, 0.16), transparent 18%),
+        linear-gradient(30deg, transparent 48%, rgba(255, 191, 61, 0.08) 49%, rgba(255, 191, 61, 0.08) 51%, transparent 52%);
+      background-size: 120px 120px, 30px 30px;
+    }
+
+    .location-card > *,
+    .hive-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .card-kicker {
+      color: var(--accent-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.76rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.82rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      white-space: nowrap;
+    }
+
+    .status.ok {
+      color: var(--sage);
+    }
+
+    .status.warn {
+      color: var(--warn);
+    }
+
+    .metric-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-top: 0.9rem;
+    }
+
+    .metric-chip {
+      padding: 0.55rem 0.75rem;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 204, 92, 0.1);
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .action-bar {
+      padding: 1rem 1.15rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .selection-summary {
+      display: grid;
+      gap: 0.3rem;
+    }
+
+    .selection-summary strong {
+      font-size: 1rem;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.82rem 1.15rem;
+      background: linear-gradient(180deg, rgba(255, 224, 143, 0.08), rgba(255, 191, 61, 0.08));
+      color: var(--text);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .button.primary {
+      background: linear-gradient(135deg, rgba(255, 191, 61, 0.34), rgba(217, 138, 31, 0.24));
+      border-color: rgba(255, 191, 61, 0.36);
+      color: #120c07;
+      font-weight: 700;
+    }
+
+    .button.secondary {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .context-card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .context-grid {
+      display: grid;
+      gap: 0.7rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .fact-card strong {
+      display: block;
+      color: var(--accent);
+      font-size: 1.25rem;
+      margin-top: 0.35rem;
+    }
+
+    .mini-list {
+      display: grid;
+      gap: 0.6rem;
+      margin-top: 0.8rem;
+    }
+
+    .mini-list div {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 1240px) {
+      .page-shell {
+        grid-template-columns: 260px minmax(0, 1fr);
+      }
+
+      .context-rail {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 920px) {
+      .page-shell,
+      .selection-grid,
+      .context-rail {
+        grid-template-columns: 1fr;
+      }
+
+      .side-rail {
+        order: 2;
+      }
+
+      .context-rail {
+        order: 3;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="panel side-rail">
+      <div class="brand">
+        <div class="brand-badge">HEX</div>
+        <div>
+          <h1>Hive Signal</h1>
+          <p class="muted">Report-first bee intelligence</p>
+        </div>
+      </div>
+
+      <div class="workflow">
+        <div class="workflow-step">
+          <strong>Step 1</strong>
+          <p>Choose the apiary location so the model scopes weather, nectar flow, and device context correctly.</p>
+        </div>
+        <div class="workflow-step">
+          <strong>Step 2</strong>
+          <p>Select the hive to inspect. Each hive card carries the latest telemetry and alert posture.</p>
+        </div>
+        <div class="workflow-step">
+          <strong>Step 3</strong>
+          <p>Generate a report, then open a follow-up conversation around that report.</p>
+        </div>
+      </div>
+
+      <div class="recent-list">
+        <div class="section-tag">Recent Reports</div>
+        <div class="recent-item active">
+          <strong>Alpha-09 Morning Health Pass</strong>
+          <p>North Orchard • 07:45 • Nectar flow surge and swarm watch flagged.</p>
+        </div>
+        <div class="recent-item">
+          <strong>Delta-12 Forage Activity Review</strong>
+          <p>Riverside Meadow • Yesterday • Light foraging and low flight density.</p>
+        </div>
+        <div class="recent-item">
+          <strong>Gamma-02 Queenright Stability Check</strong>
+          <p>Hilltop Lavender • Apr 3 • Stable brood pattern and weight recovery.</p>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-stage">
+      <section class="panel hero">
+        <div class="section-tag">Main Entry</div>
+        <h2>Select the hive before you generate the report.</h2>
+        <p>
+          This page is the front door to the product. The user chooses the beehive place first, then the exact hive,
+          then triggers a report that becomes the object they discuss with the model.
+        </p>
+        <div class="hero-meta">
+          <div class="pill">3 apiary locations online</div>
+          <div class="pill">12 hives reporting</div>
+          <div class="pill">last telemetry sync 2 minutes ago</div>
+        </div>
+      </section>
+
+      <section class="selection-grid">
+        <article class="panel selector-panel">
+          <div class="selector-head">
+            <div>
+              <div class="section-tag">Select Beehive Place</div>
+              <div class="section-title">Apiary location</div>
+              <div class="section-subtitle">Choose the physical site or yard before drilling down into hive-level analysis.</div>
+            </div>
+          </div>
+
+          <input class="ghost-input" type="text" placeholder="Search apiaries, orchard rows, or yard names" />
+
+          <div class="location-list">
+            <div class="location-card active">
+              <div class="card-row">
+                <div>
+                  <div class="card-kicker">Selected place</div>
+                  <div class="card-title">North Orchard</div>
+                  <p>Western slope yard with stronger afternoon sun, dense clover forage, and the highest sensor coverage.</p>
+                </div>
+                <div class="status ok">Stable site</div>
+              </div>
+              <div class="metric-row">
+                <div class="metric-chip">4 active hives</div>
+                <div class="metric-chip">Wind 8 km/h</div>
+                <div class="metric-chip">Bloom index high</div>
+                <div class="metric-chip">2 devices online</div>
+              </div>
+            </div>
+
+            <div class="location-card">
+              <div class="card-row">
+                <div>
+                  <div class="card-kicker">Apiary place</div>
+                  <div class="card-title">Riverside Meadow</div>
+                  <p>Lower humidity pocket near the creek. Good brood growth, but weaker afternoon flight observations this week.</p>
+                </div>
+                <div class="status warn">Watch humidity</div>
+              </div>
+              <div class="metric-row">
+                <div class="metric-chip">5 active hives</div>
+                <div class="metric-chip">Humidity 66%</div>
+                <div class="metric-chip">Forage medium</div>
+                <div class="metric-chip">1 gateway online</div>
+              </div>
+            </div>
+
+            <div class="location-card">
+              <div class="card-row">
+                <div>
+                  <div class="card-kicker">Apiary place</div>
+                  <div class="card-title">Hilltop Lavender</div>
+                  <p>Higher exposure yard with cooler nights and cleaner acoustic baselines. Best site for comparing colony-to-colony variance.</p>
+                </div>
+                <div class="status ok">Clear readings</div>
+              </div>
+              <div class="metric-row">
+                <div class="metric-chip">3 active hives</div>
+                <div class="metric-chip">Temp 21.3°C</div>
+                <div class="metric-chip">Forage moderate</div>
+                <div class="metric-chip">Low pest pressure</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel selector-panel">
+          <div class="selector-head">
+            <div>
+              <div class="section-tag">Select Hive</div>
+              <div class="section-title">Available colonies</div>
+              <div class="section-subtitle">These cards should become the report anchors the user can discuss with the model afterward.</div>
+            </div>
+            <div class="pill">North Orchard</div>
+          </div>
+
+          <input class="ghost-input" type="text" placeholder="Search hive id, queen state, or alert tags" />
+
+          <div class="hive-grid">
+            <div class="hive-card active">
+              <div class="card-row">
+                <div>
+                  <div class="card-kicker">Hive selected</div>
+                  <div class="card-title">Alpha-09</div>
+                  <p>Strong nectar flow, elevated acoustic activity, and rising weight gain. Most likely hive for a detailed morning report.</p>
+                </div>
+                <div class="status warn">Swarm watch</div>
+              </div>
+              <div class="metric-row">
+                <div class="metric-chip">Internal temp 35.8°C</div>
+                <div class="metric-chip">Humidity 59%</div>
+                <div class="metric-chip">Weight +2.3 kg</div>
+                <div class="metric-chip">Acoustic 192 Hz</div>
+              </div>
+            </div>
+
+            <div class="hive-card">
+              <div class="card-row">
+                <div>
+                  <div class="card-kicker">Hive candidate</div>
+                  <div class="card-title">Beta-04</div>
+                  <p>Balanced telemetry and clean queenright signals. Better fit for a routine health snapshot than an alert-driven report.</p>
+                </div>
+                <div class="status ok">Healthy</div>
+              </div>
+              <div class="metric-row">
+                <div class="metric-chip">Internal temp 34.1°C</div>
+                <div class="metric-chip">Humidity 56%</div>
+                <div class="metric-chip">Weight +0.7 kg</div>
+                <div class="metric-chip">Brood stable</div>
+              </div>
+            </div>
+
+            <div class="hive-card">
+              <div class="card-row">
+                <div>
+                  <div class="card-kicker">Hive candidate</div>
+                  <div class="card-title">Gamma-11</div>
+                  <p>Lower weight recovery after rain. Suitable for a forage-efficiency report or action-plan follow-up.</p>
+                </div>
+                <div class="status warn">Low gain</div>
+              </div>
+              <div class="metric-row">
+                <div class="metric-chip">Internal temp 33.6°C</div>
+                <div class="metric-chip">Humidity 62%</div>
+                <div class="metric-chip">Weight +0.2 kg</div>
+                <div class="metric-chip">Flight reduced</div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel action-bar">
+        <div class="selection-summary">
+          <div class="section-tag">Ready To Generate</div>
+          <strong>North Orchard → Alpha-09</strong>
+          <span class="muted">The report should be created for this hive and used as the basis for the follow-up chat.</span>
+        </div>
+        <div class="action-row">
+          <a class="button secondary" href="#">View last report</a>
+          <a class="button primary" href="#">Generate report</a>
+        </div>
+      </section>
+    </main>
+
+    <aside class="panel context-rail">
+      <div class="context-card">
+        <div class="section-tag">Report Scope</div>
+        <h3>What the model should synthesize</h3>
+        <p>Summary, risk posture, recommended actions, confidence, and cited evidence tied to the selected hive and its location.</p>
+      </div>
+
+      <div class="context-grid">
+        <div class="fact-card">
+          <div class="section-tag">Selected Place</div>
+          <strong>North Orchard</strong>
+          <p>Best coverage and strongest forage trend.</p>
+        </div>
+        <div class="fact-card">
+          <div class="section-tag">Selected Hive</div>
+          <strong>Alpha-09</strong>
+          <p>Highest diagnostic urgency this morning.</p>
+        </div>
+      </div>
+
+      <div class="context-card">
+        <div class="section-tag">Why This Layout</div>
+        <h3>Report-first conversation flow</h3>
+        <p>The user is not dropping into an empty chatbot. They are choosing context first, generating an artifact, and then discussing why the model produced it.</p>
+      </div>
+
+      <div class="context-card">
+        <div class="section-tag">Report Preview Inputs</div>
+        <div class="mini-list">
+          <div><span>Telemetry window</span><strong>Last 24h</strong></div>
+          <div><span>Acoustic samples</span><strong>18 clips</strong></div>
+          <div><span>Weight checkpoints</span><strong>36 readings</strong></div>
+          <div><span>Weather context</span><strong>Included</strong></div>
+          <div><span>Confidence mode</span><strong>Evidence-first</strong></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</body>
+</html>

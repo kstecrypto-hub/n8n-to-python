@@ -1,0 +1,3 @@
+interface:
+  display_name: "KG Ingestion Architect"
+  short_description: "Design automatic knowledge graph ingestion pipelines for agents"

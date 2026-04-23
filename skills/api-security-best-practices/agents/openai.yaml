@@ -1,0 +1,7 @@
+interface:
+  display_name: "API Security Best Practices"
+  short_description: "Design and harden secure APIs"
+  default_prompt: "Use $api-security-best-practices to design or review authentication, authorization, validation, and rate limiting for an API."
+
+policy:
+  allow_implicit_invocation: true

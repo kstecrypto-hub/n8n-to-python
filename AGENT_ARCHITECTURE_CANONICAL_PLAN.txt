@@ -1,0 +1,2119 @@
+AGENT ARCHITECTURE CANONICAL PLAN
+Date: 2026-04-20
+Workspace: E:\n8n to python
+Status: Canonical planning document for the next architecture passes
+
+PURPOSE
+
+This document defines the target architecture for the Bee agent system and the execution order for getting there.
+It is intended to be the single planning source for:
+- what the agent should become
+- what should be built next
+- what should not be built yet
+- how each change should be implemented
+- how each change should be validated
+
+SKILLS USED TO DERIVE THIS PLAN
+
+This plan intentionally uses every workspace skill because the target architecture spans ingestion, retrieval, graph design, runtime, security, storage, and operations.
+
+- 1claw
+- api-security-best-practices
+- chroma-local-ingestion
+- codex-orchestration
+- docker-agent-runtime
+- kg-ingestion-architect
+- postgres-db
+- rag-ingest
+- rag-ingestion-pipeline
+
+EXECUTIVE POSITION
+
+The current system is no longer at the "make basic RAG work" stage.
+It already has:
+- stable full-corpus ingestion
+- Postgres as the main system of record
+- Chroma as the vector retrieval layer
+- KG extraction and repair
+- multimodal assets
+- user-scoped sensors
+- hybrid lexical+dense retrieval
+- KG evidence in prompt and grounding
+- exact-query embedding caching
+- a merged React admin direction
+
+The next architecture goal is not "more features at random."
+The next architecture goal is:
+
+1. make retrieval structurally stronger than plain hybrid RAG
+2. make memory disciplined and evidence-aware
+3. make graph retrieval real without prematurely adding a graph database
+4. make maintenance and serving operations as safe as fresh ingest
+5. make the runtime observable, replayable, and budget-governed
+
+CANONICAL DECISIONS
+
+The following decisions are now the default architecture unless there is a concrete reason to override them.
+
+1. Postgres remains the system of record.
+- Documents, chunks, validations, KG, sessions, memory, traces, evals, review state, caches, and audit data stay in Postgres.
+
+2. Chroma remains a retrieval-serving layer, not the source of truth.
+- Chroma exists to serve retrieval fast.
+- Chroma does not define truth.
+- Retrieval-visible writes must be staged before they are promoted live.
+
+3. The agent remains single-orchestrator, not a manager-of-specialists topology.
+- The system should use one bounded serving agent with well-defined internal stages.
+- Multi-agent runtime orchestration is not the next priority.
+
+4. Chunk and evidence grounding remain the authority.
+- KG, sensors, summaries, and memory help organize evidence.
+- Final answers must still be grounded in chunk text, trusted asset text, sensor rows, or explicit KG evidence rows that themselves point back to source evidence.
+
+5. Graph-style retrieval should be added before any graph database.
+- Build graph retrieval on top of the existing KG in Postgres first.
+- Add a graph DB only if real workloads prove Postgres traversal is the limiting factor.
+
+6. Retrieval-visible maintenance paths must become staged.
+- Fresh ingest is no longer the only flow with staged publish semantics.
+- Reindex, revalidate, repair, and review-driven accepts should converge toward the same visibility rules.
+
+7. Memory writes must be contract-based.
+- The system must not write free-form "facts" into memory unless the write is clearly sourced, typed, and bounded.
+
+8. All external credentials should move toward vault-backed access.
+- Runtime secrets should come from 1Claw or a similar just-in-time secret source, not broad plaintext database storage.
+
+WHAT TO KEEP
+
+The following parts of the current architecture are directionally correct and should be kept.
+
+- Postgres as source of truth
+- Chroma as vector retrieval layer
+- ontology-aware KG extraction
+- user-scoped places, hives, sensors, and readings
+- exact-query embedding cache
+- router-pattern cache
+- hybrid lexical+dense retrieval
+- KG evidence as first-class context
+- deterministic evidence-summary fallback when the answer model fails
+- React as the primary frontend stack
+
+WHAT IS STILL MISSING
+
+The system is good enough to run, but it is not yet the best version of the architecture.
+The main missing pieces are:
+
+1. hierarchical retrieval
+- The system still retrieves mostly at the chunk level first.
+- It needs document, section, and chunk layers.
+
+2. graph-style retrieval
+- KG is attached after retrieval, but the system does not yet retrieve by graph path or graph neighborhood.
+
+3. disciplined memory
+- Session/profile summaries exist, but the memory model still needs stronger typing, evidence policies, and decay rules.
+
+4. richer evaluation
+- The system needs a deeper evaluation program for explanation, comparison, visual, sensor, and graph-assisted questions.
+
+5. staged maintenance operations
+- Fresh ingest is safer than some maintenance paths.
+- That asymmetry should be reduced.
+
+6. stronger runtime governance
+- Better secret handling
+- better cost controls
+- better request budgets
+- better operator observability
+
+TARGET ARCHITECTURE
+
+The architecture should be thought of as six planes.
+
+1. DATA PLANE
+
+Stores:
+- Postgres
+- Chroma
+- filesystem-backed page assets
+- auth Postgres
+
+Responsibilities:
+- durable truth
+- provenance
+- audit
+- cache rows
+- eval datasets
+- operator history
+
+Rules:
+- Postgres tables own truth
+- Chroma owns search acceleration only
+- every retrieval-visible record has a stable source row in Postgres
+- every graph assertion has evidence provenance
+- every cache row is scoped by model/provider/version identity
+
+2. INGESTION PLANE
+
+Responsibilities:
+- source registration
+- parsing
+- normalization
+- chunk construction
+- chunk validation
+- embedding
+- vector staging/publish
+- KG extraction
+- KG validation
+- review and repair
+- asset linking
+- replay and recovery
+
+Rules:
+- stages are durable and replayable
+- failures are visible
+- maintenance writes follow the same safety contract as fresh ingest
+- no stage should destroy the last known good retrieval surface before replacement is ready
+
+3. RETRIEVAL PLANE
+
+Responsibilities:
+- request normalization
+- auth and tenant/resource scope enforcement
+- route planning
+- candidate generation
+- candidate reranking
+- graph expansion
+- sensor context expansion
+- bundle budgeting
+- prompt construction
+- grounding and abstention
+
+Rules:
+- retrieval should be hybrid by default
+- graph expansion should be query-type aware
+- visual retrieval should be conditional, not unconditional
+- sensor retrieval should be explicit or strongly inferred, not accidental
+
+4. MEMORY PLANE
+
+Responsibilities:
+- session continuity
+- profile/personalization
+- open-thread tracking
+- verified user facts
+- preferred source scope
+- operator review feedback
+
+Rules:
+- memories are typed
+- fact memories require evidence or explicit user self-report
+- preferences are not the same as facts
+- unresolved thread memory is not the same as domain knowledge
+- memory must be compact, inspectable, and deletable
+
+5. CONTROL PLANE
+
+Responsibilities:
+- admin UI
+- operator inspection
+- eval execution
+- repair flows
+- model/config management
+- auth and permissions
+- runtime controls
+- SQL and system views
+
+Rules:
+- one primary React admin surface
+- legacy UI only as temporary fallback
+- every destructive action should be inspectable and auditable
+
+6. RUNTIME / INFRA PLANE
+
+Responsibilities:
+- containers
+- health checks
+- secret delivery
+- queues or detached jobs
+- structured logging
+- backup/restore
+- resource isolation
+
+Rules:
+- compose defines the local operational baseline
+- services are separated by concern
+- long-running work should not depend on the API container lifecycle
+- secrets should be fetched just in time and rotated cleanly
+
+TARGET REQUEST FLOW
+
+The serving path should become this:
+
+1. Authenticate and authorize.
+- Resolve auth user
+- resolve tenant
+- resolve permitted documents, places, hives, and sensors
+- reject oversized or invalid requests early
+
+2. Normalize and classify.
+- Normalize the question
+- classify question type
+- detect whether the question is general, sensor, or mixed
+- detect whether graph-style retrieval is likely useful
+
+3. Select a retrieval profile.
+- fact
+- definition
+- source lookup
+- explanation
+- procedure
+- comparison
+- visual
+- sensor
+- mixed corpus + sensor
+
+Each profile should set:
+- lexical search width
+- dense search width
+- whether assets are searched in pass one
+- whether graph expansion is allowed
+- whether neighbor expansion is allowed
+- prompt budget quotas by evidence type
+
+4. Generate initial candidates.
+- lexical chunk candidates from Postgres FTS / trigram
+- dense chunk candidates from Chroma
+- lexical asset candidates when appropriate
+- dense asset candidates when appropriate
+- sensor candidates when sensor mode applies
+- seed KG entities from the query and top chunk candidates
+
+5. Rerank candidates.
+- dense score
+- lexical score
+- section/title overlap
+- exact phrase overlap
+- ontology metadata overlap
+- document and section diversity
+- verified KG density
+
+6. Build graph expansion candidates.
+- only for supported query types
+- seed from the question and top retrieved chunks
+- expand through a small local neighborhood
+- rank assertions and short paths
+- attach evidence rows and supporting chunks
+
+7. Assemble the context bundle.
+- selected chunks
+- selected assets
+- selected sensor rows or aggregates
+- selected assertions
+- selected entities
+- selected KG evidence
+- selected graph paths
+- session memory
+- profile memory
+
+8. Generate the answer.
+- strict response schema
+- allowed ids only
+- no uncited answer claims
+- confidence and abstention are mandatory
+
+9. Ground and verify.
+- claim verifier when enabled
+- lexical and structural fallback
+- evidence-id validation
+- citation validation
+- abstain on failure
+
+10. Persist the trace.
+- query run
+- selected sources
+- selected evidence
+- selected graph paths
+- response metadata
+- budgets and latency metrics
+
+11. Update memory through typed contracts.
+- preferences
+- explicit user facts
+- open threads
+- stable verified facts
+
+RETRIEVAL ARCHITECTURE: WHAT TO BUILD
+
+The retrieval stack should be improved in this order.
+
+A. HIERARCHICAL RETRIEVAL
+
+Current weakness:
+- retrieval is still chunk-first with later expansion
+
+Target:
+- document synopsis layer
+- section synopsis layer
+- chunk layer
+
+How:
+- create document summary nodes and section summary nodes during ingest
+- embed those summaries separately
+- retrieve document and section candidates first for broad queries
+- restrict chunk search inside the surviving documents/sections
+
+Why:
+- better precision on long books
+- better comparison answers
+- lower prompt noise
+- better control over document spread
+
+B. TRUE HYBRID RETRIEVAL
+
+Current state:
+- lexical + dense candidate merging already exists
+
+Target:
+- keep hybrid retrieval as the default
+- improve lexical indexing quality and diagnostics
+
+How:
+- add explicit FTS/trigram indexes for chunk text, titles, section labels, and asset searchable text
+- store match-source diagnostics per result
+- expose lexical vs dense contributions in admin replay tools
+
+Why:
+- rare terms
+- OCR-heavy strings
+- exact titles
+- citations with rare domain names
+
+C. CONDITIONAL ASSET RETRIEVAL
+
+Current issue:
+- asset retrieval has improved, but the architecture should formalize when it is allowed
+
+Target:
+- no pass-one asset search for plain text-first questions unless the route demands it
+
+How:
+- visual retrieval profile
+- asset expansion only when:
+  - the route is visual
+  - chunk links imply relevant assets
+  - or first-pass grounding is weak
+
+D. GRAPH-STYLE RETRIEVAL
+
+This is the next major architecture improvement.
+
+Definition:
+- retrieve connected facts, not just semantically similar chunks
+
+How it should work:
+
+1. Seed entities.
+- From the normalized question
+- from the top chunk candidates
+- from exact lexical entity matches
+
+2. Expand a local neighborhood.
+- max 1 hop initially
+- later 2 hops for selected query types
+- predicate whitelist by query type
+- minimum confidence and evidence thresholds
+
+3. Build ranked path objects.
+- assertion sequence
+- involved entities
+- supporting evidence ids
+- supporting chunk ids
+- path score
+
+4. Include compact paths in the prompt.
+- not raw graph dumps
+- only a few short chains
+
+5. Require grounding back to evidence.
+- graph paths are useful only if they point to evidence
+
+Where to build it:
+- Postgres first
+- not a graph DB yet
+
+When to use it:
+- explanation
+- procedure
+- comparison
+- causal or dependency questions
+
+What to avoid:
+- unrestricted neighborhood dumps
+- using KG without source evidence
+- using graph retrieval on every question
+
+E. RERANKING IMPROVEMENTS
+
+Add a second-stage reranker for hard questions.
+
+Target:
+- rerank top 20-40 chunk candidates with a stronger model or cross-encoder style signal
+
+Use only when:
+- the question is broad or complex
+- the first pass is ambiguous
+- the query type is explanation, procedure, or comparison
+
+Why:
+- better final context selection
+- less prompt waste
+
+F. RESPONSE CACHING
+
+Not a first move, but worth planning.
+
+Target:
+- safe read-only answer caching for repeated identical questions under the same corpus snapshot and runtime config
+
+Rules:
+- scope by tenant
+- scope by corpus snapshot/version
+- scope by query mode
+- invalidate on corpus mutation or config version change
+
+Do not do this before:
+- retrieval and grounding regressions are stable
+
+KG ARCHITECTURE: WHAT TO BUILD
+
+A. KEEP THE CURRENT MODEL
+
+The KG should continue to be:
+- ontology-constrained
+- provenance-backed
+- evidence-linked
+- stored in Postgres
+
+B. IMPROVE CANONICALIZATION
+
+Targets:
+- stronger entity alias handling
+- explicit synonym tables
+- predicate-level quality metrics
+- stable resolution rules by ontology version
+
+How:
+- maintain canonical entity tables plus alias tables
+- store resolution decisions and confidence
+- record ontology version on extraction and validation
+
+C. ADD GRAPH QUALITY METRICS
+
+Measure:
+- assertion count by predicate
+- evidence coverage per assertion
+- orphan entities
+- orphan assertions
+- high-degree generic entities
+- quarantine/review rates by predicate and document class
+
+These metrics are required before graph-style retrieval rollout.
+
+D. ADD PATH OBJECTS AS A DERIVED LAYER
+
+Do not create a separate database yet.
+Create derived query-time path objects:
+- seeded entity ids
+- traversed assertion ids
+- evidence ids
+- chunk ids
+- path relevance score
+- path explanation text
+
+E. ADD GRAPH REPAIR TOOLING
+
+Operators need:
+- replay KG for selected documents/chunks
+- inspect bad predicates
+- inspect alias merges
+- inspect path candidates
+
+SENSOR ARCHITECTURE: WHAT TO BUILD
+
+The sensor system should become a first-class retrieval modality, not just an appended context block.
+
+1. Add explicit sensor query parsing.
+- identify sensor ids, place ids, hive ids, measurement types, and time windows
+
+2. Add canonical aggregations.
+- latest
+- average over window
+- min/max
+- trend
+- anomaly flags
+
+3. Add unit normalization.
+- store canonical units and conversion metadata
+
+4. Add mixed-mode retrieval.
+- Questions like "Could temperature stress explain this colony behavior?" should combine:
+  - sensor evidence
+  - corpus evidence
+  - graph support if needed
+
+5. Keep sensor citations deterministic.
+- row ids
+- time windows
+- aggregate method
+- source sensor and hive/place identity
+
+MEMORY ARCHITECTURE: WHAT TO BUILD
+
+Current memory should be restructured into four types.
+
+1. SESSION OPERATING MEMORY
+- active goal
+- current thread
+- unresolved asks
+- recent decisions
+
+2. PROFILE / PREFERENCE MEMORY
+- communication style
+- preferred answer depth
+- domain experience level
+- known preferred documents or scopes
+
+3. VERIFIED FACT MEMORY
+- explicit user-provided facts
+- durable user facts derived from repeated confirmation
+- facts must have:
+  - source type
+  - confidence
+  - created_at
+  - expiry or review policy
+
+4. RETRIEVAL MEMORY
+- previously useful documents
+- preferred sections for recurring questions
+- recent high-quality evidence bundles
+
+MEMORY WRITE POLICY
+
+The system should not write memory freely.
+
+Rules:
+- explicit user self-report can create a user fact
+- model inference alone should not create a durable fact
+- evidence-backed domain facts should stay in corpus/KG, not profile memory
+- unresolved threads should expire
+- preferences can be updated, but facts require stronger gates
+
+MEMORY READ POLICY
+
+Prompt injection from memory is a real risk.
+Memory injection should therefore be:
+- typed
+- compact
+- size-capped
+- inspected in admin
+- removable by type
+
+INGESTION ARCHITECTURE: WHAT TO BUILD NEXT
+
+The core ingest works, but the architecture should be tightened further.
+
+1. Extend staged publish to all retrieval-visible maintenance flows.
+- reindex
+- revalidate
+- review-driven accept/reject
+- repair operations
+
+2. Add synopsis generation during ingest.
+- document synopsis
+- section synopsis
+- maybe table/figure summaries when useful
+
+3. Add lexical index preparation during ingest.
+- normalized searchable text
+- trigram/FTS-ready fields
+- title and heading terms
+
+4. Add graph-readiness metrics during ingest completion.
+- graph coverage
+- evidence coverage
+- quarantine counts
+- entity resolution quality
+
+5. Add corpus snapshot/versioning.
+- every completed corpus state should have a version id
+- retrieval traces must record the corpus snapshot used
+
+6. Add immutable prompt/model version recording everywhere.
+- answer model
+- router model
+- KG model
+- reviewer model
+- verifier model
+
+SECURITY, SECRET, AND RUNTIME PLAN
+
+A. SECRET HANDLING
+
+Use the 1Claw direction for the target state.
+
+Target:
+- model keys
+- DB credentials
+- admin/system credentials
+- runtime secret encryption keys
+
+should be obtained from a vault/env bundle, not broadly persisted in application tables.
+
+Rules:
+- metadata-first secret discovery
+- just-in-time reads only
+- no raw secret values in logs, prompts, or persisted operator text
+- immediate rotate-and-store flow after key rotation
+
+B. API SAFETY
+
+Every public and admin endpoint should converge on:
+- deny by default
+- strict request validation
+- bounded input sizes
+- request-type rate limits
+- object-level auth checks
+- durable audit logging
+
+C. RUNTIME TOPOLOGY
+
+Keep the current Docker direction, but harden it.
+
+Baseline services:
+- api
+- worker
+- postgres
+- auth-postgres
+- chroma
+
+Later optional services:
+- queue
+- dedicated eval worker
+- dedicated repair/replay worker
+- metrics/log collector
+
+Rules:
+- long-running ingest or replay cannot depend on API container uptime
+- every worker type should have a clear concern boundary
+- health checks should distinguish:
+  - process up
+  - dependencies reachable
+  - model egress functioning
+
+D. BACKUP AND RESTORE
+
+Required:
+- Postgres backup
+- auth-postgres backup
+- Chroma persistence backup
+- restore drill
+- corpus snapshot and restore documentation
+
+E. COST GOVERNANCE
+
+Required controls:
+- per-model usage dashboards
+- per-request token metrics
+- question-type latency and cost metrics
+- daily budget alarms
+- circuit breakers on provider failure spikes
+
+ADMIN AND OPERATOR SURFACE
+
+The admin UI should become the control plane for the entire architecture.
+
+The React admin should expose:
+- corpus browser
+- chunk inspector
+- asset inspector
+- KG inspector
+- graph path inspector
+- sensor inspector
+- query replay
+- retrieval diffing
+- memory inspector
+- model/prompt version explorer
+- cost dashboard
+- ingest/repair/replay controls
+- eval runner and score history
+
+The legacy admin should eventually be retired after full parity.
+
+EVALUATION PROGRAM
+
+This is mandatory.
+The architecture should not advance based only on intuition.
+
+Build five eval tracks.
+
+1. RETRIEVAL EVAL
+- chunk recall
+- asset recall
+- lexical vs dense contribution
+- document concentration
+- graph expansion quality
+
+2. ANSWER EVAL
+- grounded answer correctness
+- abstention correctness
+- citation precision
+- unsupported claim rate
+
+3. SENSOR EVAL
+- time-window correctness
+- aggregate correctness
+- mixed sensor + corpus correctness
+
+4. MEMORY EVAL
+- useful continuity
+- preference recall
+- fact memory correctness
+- unwanted stale carryover
+
+5. OPERATOR / MAINTENANCE EVAL
+- repair safety
+- revalidation safety
+- replay success
+- visibility of stale or failed runs
+
+Every major rollout should have:
+- baseline score
+- candidate score
+- regression diff
+- explicit go/no-go decision
+
+GRAPH DATABASE DECISION
+
+Do not add a graph database yet.
+
+Use Postgres first for:
+- seeded entity lookup
+- 1-hop traversal
+- constrained 2-hop traversal
+- path construction
+- evidence joins
+
+Reconsider a graph DB only if these become true:
+- graph-style retrieval is already proven valuable
+- multi-hop traversal is common in production
+- path ranking queries in Postgres become slow or awkward
+- interactive graph exploration becomes a real operator or product feature
+- graph algorithms become part of the serving path
+
+If added later:
+- the graph DB should begin as a derived read model
+- Postgres should still own the canonical write model and provenance
+
+THINGS THE ARCHITECTURE SHOULD EXPLICITLY AVOID
+
+1. Do not let user chat mutate the corpus.
+2. Do not let memory become a free-form fact store.
+3. Do not let KG assertions outrank source evidence.
+4. Do not let graph retrieval expand without tight limits.
+5. Do not add a graph database before graph-style retrieval proves its value.
+6. Do not unify router cache and embedding cache.
+7. Do not cache answers without corpus snapshot scoping.
+8. Do not make the system depend on a single UI surface without replay and inspection tooling.
+9. Do not keep secrets as broad plaintext runtime overrides if a vault-backed path is available.
+10. Do not add multi-agent orchestration before the single-agent retrieval stack is structurally strong.
+
+PRIORITIZED EXECUTION ORDER
+
+PHASE 0 - BASELINE FREEZE
+
+Goal:
+- freeze the current system into a measurable baseline
+
+Build:
+- corpus snapshot id
+- model and prompt registry
+- retrieval eval datasets by question type
+- graph quality metrics
+- memory type definitions
+- cost dashboard basics
+
+Exit criteria:
+- every query run records corpus snapshot, model versions, and prompt version
+- baseline eval scores exist
+
+PHASE 1 - RETRIEVAL EXCELLENCE
+
+Goal:
+- make the core retrieval stack strong before graph expansion
+
+Build:
+- hierarchical document/section/chunk retrieval
+- better lexical indexes
+- conditional asset retrieval formalization
+- optional second-stage reranker
+- richer retrieval diagnostics in admin
+
+Exit criteria:
+- better retrieval precision on explanation/comparison questions
+- lower prompt noise
+- no regression on fact/source-lookup questions
+
+PHASE 2 - GRAPH-STYLE RETRIEVAL
+
+Goal:
+- use the KG as a real retrieval surface, not just attached support
+
+Build:
+- entity seeding
+- predicate-aware local expansion
+- ranked path objects
+- graph bundle prompt section
+- graph path admin inspector
+
+Exit criteria:
+- explanation/procedure/comparison eval scores improve
+- unsupported-claim rate does not rise
+- graph bundle remains small and evidence-backed
+
+PHASE 3 - MEMORY REBUILD
+
+Goal:
+- make memory useful and safe instead of loosely summarized
+
+Build:
+- typed memory schema
+- write policies
+- expiry and review policies
+- memory inspector
+- better prompt injection of only relevant memory slices
+
+Exit criteria:
+- continuity improves without factual contamination
+- stale or incorrect memory is easy to inspect and delete
+
+PHASE 4 - MAINTENANCE SAFETY AND SECRET HARDENING
+
+Goal:
+- make all maintenance operations and runtime secrets production-safe
+
+Build:
+- staged publish for maintenance flows
+- 1Claw-backed secret handling path
+- audit improvements
+- restore drills
+- stronger runtime budgets and circuit breakers
+
+Exit criteria:
+- repair/reindex/revalidate are no longer materially riskier than fresh ingest
+- secret exposure surface is reduced
+
+PHASE 5 - CONTROL PLANE COMPLETION
+
+Goal:
+- make the admin UI the real operator cockpit
+
+Build:
+- full React admin parity
+- graph inspector
+- memory inspector
+- replay diffing
+- corpus snapshot navigation
+- budget and provider dashboards
+
+Exit criteria:
+- legacy admin no longer needed for daily operations
+
+SUGGESTED CONCRETE BACKLOG
+
+Do first:
+- add corpus snapshot/version ids to traces and completion records
+- add document and section synopsis generation
+- add FTS/trigram indexes for chunk and asset lexical retrieval
+- add graph quality metrics tables/views
+- add graph-retrieval eval dataset
+- add memory type schema and write-policy contract
+
+Do next:
+- implement staged graph-style retrieval in Postgres
+- implement a path inspector in admin
+- implement a stronger reranker for complex question types
+- implement memory inspector and delete-by-type controls
+- extend staged publish to reindex and repair flows
+
+Do after that:
+- add safe answer caching under corpus snapshot boundaries
+- add queue-backed worker split if replay/eval concurrency grows
+- consider graph DB only after measured pressure
+
+ACCEPTANCE STANDARD FOR "GOOD ENOUGH"
+
+The architecture should be considered in a strong state when all of these are true:
+
+1. Retrieval is hierarchical, hybrid, and graph-assisted where appropriate.
+2. Every answer trace can explain exactly why each source was included.
+3. Graph-style retrieval improves targeted question classes without harming grounding.
+4. Memory is typed, inspectable, and hard to poison.
+5. Maintenance flows are staged, observable, and replayable.
+6. Secrets are not broadly persisted in plaintext operational paths.
+7. Admin provides one primary operator surface.
+8. Evaluation is a gating system, not an afterthought.
+
+FINAL ARCHITECTURE DIRECTION IN ONE SENTENCE
+
+The right end state is a single grounded serving agent built on Postgres truth, Chroma acceleration, evidence-backed KG expansion, disciplined typed memory, sensor-aware retrieval, staged maintenance writes, vault-backed secrets, and a fully inspectable React control plane.
+
+IMPLEMENTATION LOG
+
+[2026-04-20 23:54 EEST] Phase 0 started.
+- Added corpus snapshot schema foundations in sql/schema.sql:
+  - new corpus_snapshots table
+  - documents.latest_corpus_snapshot_id
+  - ingestion_jobs.completed_corpus_snapshot_id
+  - agent_query_runs.corpus_snapshot_id
+- Added repository support in src/bee_ingestion/repository.py:
+  - create_corpus_snapshot(...)
+  - get_latest_corpus_snapshot(...)
+  - get_latest_corpus_snapshot_id(...)
+  - agent query run persistence now accepts corpus_snapshot_id
+- Intent of this slice:
+  - every published corpus mutation should get a durable snapshot id
+  - every agent trace should later record which corpus snapshot it read
+- Next immediate step:
+  - wire snapshot creation into ingest completion and wire snapshot capture into AgentService.query()
+
+[2026-04-21 00:00 EEST] Corpus snapshot wiring is now in the live code paths.
+- Agent serving path updated in src/bee_ingestion/agent.py:
+  - AgentService.query() now resolves the latest tenant corpus snapshot id before retrieval
+  - persisted agent turns now carry corpus_snapshot_id
+  - response payloads now expose corpus_snapshot_id
+- Ingest completion path updated in src/bee_ingestion/service.py:
+  - successful fresh document publish now creates a corpus snapshot row
+  - successful resumed document publish now creates a corpus snapshot row
+  - ingest return payloads now include corpus_snapshot_id
+- Architectural effect:
+  - query traces can now be tied to the retrieval-visible corpus state they used
+  - completed ingest publishes now create a durable version marker instead of only mutating live state
+- Next immediate step:
+  - add tests for the new snapshot plumbing
+  - then implement graph quality baseline storage/views as the next Phase 0 slice
+
+[2026-04-21 00:04 EEST] Snapshot provenance extended to source rows.
+- agent_query_sources in sql/schema.sql now carries corpus_snapshot_id
+- repository source persistence in src/bee_ingestion/repository.py now stamps corpus_snapshot_id on source-link rows
+- get_agent_query_detail() now returns source-level snapshot provenance
+- Reason:
+  - query runs alone are not enough for exact replay and provenance inspection
+  - the source-link layer also needs to know which retrieval-visible corpus state produced it
+
+[2026-04-21 00:08 EEST] Replay now fails closed on corpus drift.
+- src/bee_ingestion/agent.py request_scope now carries corpus_snapshot_id
+- src/bee_ingestion/api.py replay endpoint now compares:
+  - stored query-run corpus snapshot
+  - current tenant corpus snapshot
+- replay now returns 409 on drift instead of silently pretending the replay is exact
+- Reason:
+  - snapshot ids are not useful if replay ignores them
+  - this closes the first serious correctness gap in the snapshot slice
+
+[2026-04-21 00:14 EEST] Snapshot slice validated.
+- py_compile passed for:
+  - src/bee_ingestion/agent.py
+  - src/bee_ingestion/api.py
+  - src/bee_ingestion/repository.py
+  - src/bee_ingestion/service.py
+  - tests/test_agent.py
+  - tests/test_service.py
+- containerized focused test run passed:
+  - python -m pytest tests/test_agent.py tests/test_service.py -q
+  - result: 30 passed
+- Snapshot slice status:
+  - usable
+  - traced
+  - replay-drift-safe
+- Next critical path:
+  - Phase 0 graph quality baseline in ingestion_stage_runs metrics, repository read models, and ingest summary surfaces
+
+[2026-04-21 00:21 EEST] Graph quality baseline implementation started.
+- src/bee_ingestion/service.py now has reusable graph/completion metric builders:
+  - _build_graph_quality_metrics(...)
+  - _build_completion_metrics(...)
+- Fresh ingest and resumed ingest now persist richer metrics into stage completion writes:
+  - KG stage now carries assertions/entities/evidence and ratio metrics
+  - indexed stage now carries completion counts, index counts, and publish-skip state
+- tools/reingest_all_pdfs.py now aggregates corpus-level totals from per-file results:
+  - accepted/review/rejected chunks
+  - pages and page assets
+  - indexed chunks/assets
+  - kg_validated/review/skipped/quarantined
+  - kg_assertions/entities/evidence
+- src/bee_ingestion/repository.py overview/read models now expose:
+  - kg_evidence totals
+  - kg_validated extraction totals
+  - corpus snapshot count
+  - per-document kg_validated/review/skipped/quarantined counts
+- Reason:
+  - graph quality needs to become visible from persisted truth, not just inferred from ad hoc logs
+
+[2026-04-21 00:31 EEST] Lexical retrieval indexing slice landed on disk.
+- sql/schema.sql now enables `pg_trgm`
+- sql/schema.sql now adds lexical support indexes for the current hybrid retrieval contract:
+  - `document_chunks (tenant_id, document_id, chunk_index)`
+  - `page_assets (tenant_id, document_id, page_number, asset_index)`
+  - trigram GIN indexes on chunk body text
+  - trigram GIN indexes on chunk title / section title / section heading expressions
+  - trigram GIN indexes on asset search text and asset label
+- src/bee_ingestion/repository.py runtime schema compatibility now creates the same extension/index set at startup
+- Intent:
+  - keep retrieval behavior stable
+  - upgrade the access path under the existing lexical query shape
+  - avoid rewriting lexical ranking before the database primitives are in place
+- Next immediate step:
+  - validate the new indexes against the running Postgres stack
+  - then move to synopsis storage for hierarchical retrieval
+
+[2026-04-21 00:36 EEST] Lexical retrieval indexing slice validated live.
+- `pg_trgm` exists in the running `bee_ingestion` Postgres database
+- all planned lexical indexes exist in `pg_indexes`
+- focused regression suite still passes:
+  - `python -m pytest tests/test_agent.py tests/test_service.py -q`
+  - result: 30 passed
+- Slice status:
+  - implemented
+  - live-compatible
+  - regression-clean
+- Next critical path:
+  - add section/document synopsis storage and generation after `chunks_validated`
+  - use that as the foundation for hierarchical retrieval before adding graph-style traversal
+
+[2026-04-21 00:41 EEST] Lexical retrieval slice corrected after review.
+- Removed privileged `CREATE EXTENSION pg_trgm` from normal repository startup
+- Runtime schema compatibility now:
+  - always creates safe btree filter indexes
+  - only creates trigram indexes if `pg_trgm` already exists
+- Added missing indexes to match the real lexical predicates:
+  - `chunk_validations (status, chunk_id)`
+  - `document_chunks (status, tenant_id, document_id, chunk_index)`
+  - trigram index on `page_assets.asset_type`
+- Reason:
+  - app startup should not assume extension-creation privileges
+  - the lexical access path needs to match both the acceptance filter and the asset-type predicate, not just text fields
+- Next immediate step:
+  - revalidate the corrected lexical slice live
+  - then continue to synopsis storage/generation
+
+[2026-04-21 00:46 EEST] Corrected lexical slice revalidated.
+- repository startup still initializes cleanly against the live stack
+- focused regression suite still passes:
+  - `python -m pytest tests/test_agent.py tests/test_service.py -q`
+  - result: 30 passed
+- live catalog confirms the corrective indexes now exist:
+  - `chunk_validations_status_chunk_idx`
+  - `document_chunks_status_tenant_document_idx`
+  - `page_assets_asset_type_trgm_idx`
+- Retrieval foundation status:
+  - snapshot/version provenance in place
+  - graph quality baseline in place
+  - lexical+dense retrieval now has proper indexed lexical support
+- Next critical path:
+  - section/document synopsis storage and generation
+
+[2026-04-21 01:02 EEST] Synopsis storage/generation slice landed and validated.
+- Added new canonical storage tables:
+  - `document_synopses`
+  - `document_section_synopses`
+- Added runtime schema compatibility for those tables and indexes
+- Added deterministic synopsis generation in `src/bee_ingestion/service.py`
+  - section synopses are built from accepted chunks grouped by `section_path`
+  - document synopsis is built from the section synopses
+  - synopsis generation is extractive/deterministic for now, not model-backed
+- Added lifecycle hooks so synopses refresh when acceptance state changes:
+  - fresh ingest after `chunks_validated`
+  - resumed ingest before continuing KG/index work
+  - `revalidate_document(...)`
+  - review accept/reject paths
+- Added repository read/write methods and exposed synopsis data through `get_document_detail(...)`
+- Validation:
+  - `python -m pytest tests/test_agent.py tests/test_service.py -q`
+  - result: 30 passed
+  - live Postgres catalog confirms both synopsis tables exist
+- Reason:
+  - hierarchical retrieval needs durable section/document-level objects before it can route or compress context above the chunk layer
+- Next critical path:
+  - start using synopsis objects in retrieval itself
+  - then add graph-style expansion on top of the now-versioned, measured, hierarchical corpus
+
+[2026-04-21 01:11 EEST] Retrieval now consumes synopsis objects as structural context.
+- `src/bee_ingestion/repository.py` now exposes:
+  - `list_document_synopses_by_ids(...)`
+  - `list_section_synopses_for_chunk_ids(...)`
+- `src/bee_ingestion/agent.py` now attaches document/section synopses to selected chunk rows before prompt budgeting
+- The prompt path now uses synopsis text only as structural context inside chunk payloads
+  - no new citation authority was introduced
+  - chunk/asset/sensor evidence remains the grounding authority
+- Validation:
+  - `python -m pytest tests/test_agent.py tests/test_service.py -q`
+  - result: 31 passed
+  - retrieval tests now assert synopsis context is present in the prompt chunk payload
+- Reason:
+  - this is the smallest safe hierarchical-retrieval step
+  - it improves reasoning/compression before we add document/section candidate routing or graph traversal
+- Next critical path:
+  - use synopsis objects for pre-chunk candidate routing
+  - then add bounded graph-style expansion for explanation/procedure/comparison queries
+
+[2026-04-21 01:18 EEST] Synopsis-guided retrieval expansion landed on disk.
+- Added lexical search methods for synopsis objects:
+  - `search_document_synopses_lexical(...)`
+  - `search_section_synopses_lexical(...)`
+- Added trigram indexes for synopsis titles and synopsis text in the canonical schema and runtime compatibility DDL
+- `src/bee_ingestion/agent.py` now uses bounded synopsis hits to add extra chunk candidates for:
+  - `explanation`
+  - `procedure`
+  - `comparison`
+- Design choice:
+  - this is bounded candidate expansion, not hard document filtering
+  - that keeps recall safer while still letting hierarchy influence retrieval before graph traversal exists
+- Next immediate step:
+  - validate the synopsis-guided retrieval slice
+  - then decide whether the next safe step is path-based graph expansion or memory hardening
+
+[2026-04-21 02:07 EEST] Bounded graph-retrieval foundation landed on disk.
+- Added runtime controls for graph-style retrieval:
+  - `graph_expansion_limit`
+  - `graph_per_entity_limit`
+  - `max_context_graph_chains`
+  - `graph_char_budget`
+- Added repository-side 1-hop neighbor primitive:
+  - `list_kg_neighbor_assertions_for_entities(...)`
+- Added KG access-path indexes needed by the new graph slice:
+  - `kg_assertions (chunk_id, status, confidence desc, created_at desc)`
+  - `kg_assertions (subject_entity_id, status, confidence desc, created_at desc)`
+  - `kg_assertions (object_entity_id, status, confidence desc, created_at desc)`
+  - `kg_assertions (document_id, status, confidence desc, created_at desc)`
+  - `kg_assertion_evidence (assertion_id, created_at desc)`
+  - trigram indexes for:
+    - `kg_entities.canonical_name`
+    - `kg_entities.entity_type`
+    - `kg_assertions.object_literal`
+    - `kg_assertion_evidence.excerpt`
+- Intent:
+  - make graph-style expansion a bounded local retrieval step over the existing Postgres KG
+  - keep chunk text and evidence as authority while giving the agent a real local graph neighborhood to work with
+- Next immediate step:
+  - wire the neighbor primitive into explanation/procedure/comparison retrieval
+  - build bounded graph-chain payloads that cite underlying assertions/evidence rather than inventing new authority
+
+[2026-04-21 02:18 EEST] Bounded graph-style retrieval slice landed, validated, and is live.
+- `src/bee_ingestion/agent.py` now performs bounded 1-hop Postgres KG expansion for:
+  - `explanation`
+  - `procedure`
+  - `comparison`
+- The graph slice is seeded from retrieved assertions/entities, not from raw question text alone
+- Expansion is document-bounded to the current retrieval scope
+- The prompt now carries explicit `context_graph_chains`
+  - chains are structural support only
+  - they do not become a new citation authority
+  - the model is explicitly told to cite underlying assertion/evidence ids instead
+- Added prompt/runtime accounting for:
+  - graph-chain budgeting
+  - graph-chain counts
+  - graph-chain ids in final prompt stats
+- Added retrieval tests covering graph expansion and prompt inclusion
+- Validation:
+  - `python -m pytest tests/test_agent.py tests/test_service.py -q`
+  - result: 33 passed
+  - live retrieval smoke over the real corpus returned:
+    - `question_type=explanation`
+    - `graph_chains=2`
+    - `prompt_graph_chains=2`
+  - API restarted
+  - `/health` returns `ok`
+- Design constraint preserved:
+  - chunk text and evidence remain the grounding authority
+  - graph chains are a bounded retrieval/routing aid, not an independent truth layer
+- Next critical path:
+  - memory hardening
+  - specifically: typed memory contracts, evidence-aware memory retention, and summary compaction discipline
+
+[2026-04-21 03:01 EEST] Memory hardening contract landed on disk.
+- Session/profile memory contracts are being upgraded from loose string lists to typed items in `src/bee_ingestion/agent.py`
+- Session memory now targets:
+  - typed constraints
+  - typed open/resolved threads
+  - typed preferences
+  - evidence-aware stable facts with:
+    - `fact_type`
+    - `source_type`
+    - `confidence`
+    - `review_policy`
+    - `evidence_ids`
+- Profile memory now targets typed:
+  - answer preferences
+  - recurring topics
+  - learning goals
+  - persistent constraints
+- Prompt compaction discipline tightened:
+  - prompt-bound session/profile payloads no longer duplicate stored `summary_text` by default
+  - prompt should carry the typed state, not the typed state plus a second prose copy of the same state
+- Write-policy direction now encoded into the summarization payloads:
+  - domain facts require evidence or explicit self-report
+  - unresolved threads are short-session memory
+  - preferences are preferences, not facts
+- Status:
+  - on disk
+  - not validated yet
+- Next immediate step:
+  - run focused regressions
+  - fix any legacy-memory compatibility issues
+  - then log the validated memory slice
+
+[2026-04-21 03:08 EEST] Memory hardening slice validated and ready for live rollout.
+- The memory contract upgrade in `src/bee_ingestion/agent.py` passed the broader regression suite:
+  - `docker compose exec -T api python -m pytest tests/test_agent.py tests/test_service.py -q`
+  - result: `37 passed`
+- Session memory now validates and coerces typed `v3` items for:
+  - `active_constraints`
+  - `stable_facts`
+  - `open_threads`
+  - `resolved_threads`
+  - `user_preferences`
+- Profile memory now validates and coerces typed `v3` items for:
+  - `answer_preferences`
+  - `recurring_topics`
+  - `learning_goals`
+  - `persistent_constraints`
+- Evidence-aware stable facts are now explicit:
+  - evidence-backed facts can carry `evidence_ids`
+  - non-user facts without support are dropped during coercion
+  - fallback memory synthesis preserves source/confidence/review policy instead of flattening everything to prose
+- Prompt compaction discipline is now enforced:
+  - prompt-bound session/profile memory omits duplicate `summary_text`
+  - typed state is the primary prompt payload
+- Backward compatibility is preserved by coercing legacy string-list summaries into typed `v3` structures on read
+- Next immediate step:
+  - restart the API and verify `/health`
+  - then continue the next memory-hardening slice:
+    - operator inspection controls
+    - memory delete-by-type controls
+    - stricter retention/expiry surfaces
+
+[2026-04-21 03:16 EEST] Memory operator-control backend landed on disk.
+- `src/bee_ingestion/api.py` now exposes admin memory-clear endpoints for typed memory sections:
+  - `POST /admin/api/agent/sessions/{session_id}/memory/clear`
+  - `POST /admin/api/agent/profiles/{profile_id}/memory/clear`
+- The clear controls are section-based, not raw JSON surgery:
+  - session sections:
+    - `facts`
+    - `open_threads`
+    - `resolved_threads`
+    - `preferences`
+    - `constraints`
+    - `scope`
+    - `goal`
+  - profile sections:
+    - `background`
+    - `beekeeping_context`
+    - `experience_level`
+    - `communication_style`
+    - `preferences`
+    - `topics`
+    - `learning_goals`
+    - `constraints`
+- Clear operations coerce and refresh typed memory/profile summaries before persistence so the stored `summary_text` stays aligned with `summary_json`
+- Status:
+  - on disk
+  - not validated yet
+- Next immediate step:
+  - wire React admin inspection/clear controls
+  - add API regression coverage for the new clear endpoints
+
+[2026-04-21 03:24 EEST] React memory workbench landed on disk.
+- `frontend/src/lib/api/admin.ts` now has typed admin client calls for:
+  - session memory clear
+  - profile memory clear
+- `frontend/src/features/admin/AdminExtendedSections.tsx` now exposes a real memory workbench in the React admin:
+  - typed session memory inspection
+  - typed profile memory inspection
+  - per-section clear controls
+  - visible retention/review metadata for:
+    - stable facts
+    - open/resolved threads
+    - preferences/constraints/topics/goals
+- `tests/test_api.py` now includes regression coverage for:
+  - clearing session memory sections
+  - clearing profile memory sections
+- Status:
+  - on disk
+  - not validated yet
+- Next immediate step:
+  - run API regressions
+  - run frontend build
+  - restart API and verify `/health`
+
+[2026-04-21 03:31 EEST] Memory operator-control slice validated and live.
+- The memory workbench is now live in the React admin at `/app/control`:
+  - typed session memory inspection
+  - typed profile memory inspection
+  - per-section clear controls
+  - visible retention/review metadata for stable facts and threads
+- Validation completed:
+  - `docker compose exec -T api python -m pytest tests/test_api.py -q -k "clear_session_memory_sections or clear_profile_memory_sections"`
+  - result: `2 passed`
+  - `npm run build` in `frontend`
+  - result: success
+  - `py_compile` passed for:
+    - `src/bee_ingestion/api.py`
+    - `tests/test_api.py`
+  - API restarted
+  - `/health` returns `ok`
+- Important scope note:
+  - the full `tests/test_api.py` suite is not a reliable gate right now because it contains pre-existing failures tied to the current admin/auth/runtime test harness and environment assumptions
+  - the targeted memory-control regressions for this slice are green
+- Next critical path:
+  - memory retention and expiry policy hardening
+  - specifically:
+    - prune/ignore stale open threads automatically
+    - bound how long inferred preferences survive without reaffirmation
+    - keep memory writes evidence-aware under repeated turns
+
+[2026-04-21 03:41 EEST] Memory retention and expiry hardening landed on disk.
+- `src/bee_ingestion/agent.py` now prunes stale memory more aggressively at the write path:
+  - unrelated open threads are automatically trimmed down instead of accumulating indefinitely
+  - inferred session preferences are only retained if they are reaffirmed in recent interaction
+  - inferred profile preferences/topics are only retained if they are reaffirmed; sticky user/manual/history-backed items still persist
+- The pruning logic is additive and backward-compatible:
+  - it works off existing typed item `source` fields
+  - it does not require a schema migration
+- `tests/test_agent.py` now covers:
+  - stale open-thread pruning
+  - inferred preference expiry in session memory
+  - inferred preference/topic expiry in profile memory
+- Status:
+  - on disk
+  - not validated yet
+- Next immediate step:
+  - run focused agent regressions
+  - restart API if clean
+
+[2026-04-21 03:46 EEST] Memory retention and expiry hardening validated and live.
+- Validation completed:
+  - `docker compose exec -T api python -m pytest tests/test_agent.py -q`
+  - result: `24 passed`
+  - `py_compile` passed for:
+    - `src/bee_ingestion/agent.py`
+    - `tests/test_agent.py`
+  - API restarted
+  - `/health` returns `ok`
+- Effective behavior change now live:
+  - stale unrelated open threads do not persist indefinitely
+  - inferred session preferences must be reaffirmed to survive
+  - inferred profile preferences/topics must be reaffirmed to survive
+  - sticky user/manual/history-backed memory still persists
+- Next critical path:
+  - memory relevance gating at prompt-build time
+  - specifically:
+    - inject only the memory slices relevant to the current question
+    - stop shipping full session/profile memory when the query only needs a subset
+
+[2026-04-21 03:53 EEST] Prompt-side memory relevance gating landed on disk.
+- `src/bee_ingestion/agent.py` now applies a relevance gate inside `_build_prompt_bundle()`:
+  - session stable facts are kept only if they overlap the current query or the currently retrieved support ids
+  - open/resolved threads are kept only if they match the current question
+  - session topic keywords are reduced to the current query overlap
+  - profile recurring topics and learning goals are reduced to the current query overlap
+- The gate is prompt-only:
+  - persisted memory is not rewritten by this slice
+  - the change only reduces what is injected into the answer prompt
+- Prompt stats now expose `memory_relevance` counts so the reduction is inspectable
+- `tests/test_agent.py` now covers the gating behavior directly
+- Status:
+  - on disk
+  - not validated yet
+- Next immediate step:
+  - run focused agent regressions
+  - restart API if clean
+
+[2026-04-21 03:58 EEST] Prompt-side memory relevance gating validated and live.
+- Validation completed:
+  - `docker compose exec -T api python -m pytest tests/test_agent.py -q`
+  - result: `25 passed`
+  - `py_compile` passed for:
+    - `src/bee_ingestion/agent.py`
+    - `tests/test_agent.py`
+  - API restarted
+  - `/health` returns `ok`
+- Effective behavior change now live:
+  - the answer prompt receives a narrower, question-relevant slice of session/profile memory
+  - irrelevant stored facts, threads, recurring topics, and learning goals no longer consume prompt budget on unrelated questions
+  - prompt stats now expose memory relevance trimming explicitly
+- Next critical path:
+  - memory provenance and operator traceability
+  - specifically:
+    - show why a memory item survived or was trimmed
+    - expose memory relevance stats in the admin workbench
+
+[2026-04-21 04:07 EEST] API test-gate cleanup landed on disk.
+- `tests/test_api.py` has been updated to match the current admin/auth/runtime behavior:
+  - the auth test helper now uses the configured auth DSN instead of a hardcoded host-loopback DSN that breaks inside the API container
+  - `/admin` rendering is now asserted via the current `frontend_redirect("/app/control")` behavior instead of the retired legacy admin HTML
+  - token-gated admin endpoints now use admin headers in tests that are not explicitly exercising session-based operator auth
+  - the stale `extract_pdf_text` monkeypatch was removed from the PDF ingest test because PDF ingest now delegates directly into the ingestion service
+- Status:
+  - on disk
+  - not validated yet
+- Next immediate step:
+  - rerun the full `tests/test_api.py` suite
+  - fix any remaining drift until the suite is a clean gate again
+
+[2026-04-21 14:58 EEST] API test-gate residue fixes landed on disk.
+- `tests/test_api.py` now reflects the remaining current API contracts:
+  - the identity-db read test now stubs the lazy `identity_repository` without forcing app-schema initialization against the auth database
+  - the document bundle test now accepts the current asset-Chroma payload call shape with `collection_name=...`
+  - the public `/agent/query` and `/agent/chat` stubs now accept `auth_user_id` and `query_mode`, matching the live endpoint contract
+- Status:
+  - on disk
+  - not validated yet
+- Next immediate step:
+  - rerun the full `tests/test_api.py` suite
+  - if clean, treat it as a restored alpha gate
+
+[2026-04-21 15:02 EEST] API gate restored and validated.
+- Validation completed:
+  - `docker compose exec -T api python -m pytest tests/test_api.py -q`
+  - result: `34 passed`
+  - `docker compose exec -T api python -m pytest tests/test_agent.py tests/test_service.py -q`
+  - result: `40 passed`
+  - `npm run build` in `frontend`
+  - result: production build passed
+  - live stack checks:
+    - `docker compose ps` shows api/postgres/auth-postgres/chroma up
+    - `/health` returns `ok`
+    - live retrieval smoke over the ingested corpus returned chunks/assertions/entities/graph chains without embedding fallback
+- Effective decision impact:
+  - the API test suite is a clean alpha gate again
+  - current blockers are no longer hidden behind stale test drift
+- Next critical path after alpha:
+  - operator-visible memory provenance
+  - deeper retrieval evaluation over real alpha question sets
+
+[2026-04-21 15:12 EEST] React admin sidebar scroll fix landed on disk.
+- `frontend/src/styles.css` now makes the left admin sidebar scrollable within the sticky full-height shell:
+  - `align-items: start` on `.admin-shell`
+  - `min-height: 0`, `overflow-y: auto`, `overscroll-behavior: contain`, and `scrollbar-gutter: stable` on `.admin-sidebar`
+- Intent:
+  - long admin section lists and sidebar panels should remain reachable without losing the sticky sidebar layout
+- Status:
+  - on disk
+  - validation pending via frontend build and live admin route check
+
+[2026-04-21 15:20 EEST] User UI category split landed on disk.
+- `frontend/src/features/chat/PublicChatPage.tsx` now exposes two top-level conversation categories:
+  - `Hive workspace`
+  - `General assistant`
+- Effective behavior change:
+  - the new `General assistant` path sends live agent questions without requiring hive selection or report generation
+  - switching between categories resets the live agent session so hive-scoped context does not bleed into general chat
+  - sensor mode is now hidden automatically when the current category is general or the user lacks `sensor.read`
+  - the existing hive/report-first workflow remains intact
+- Status:
+  - on disk
+  - validation pending via frontend build and live route check
+
+[2026-04-21 15:29 EEST] Agent chat runtime crash fix landed on disk.
+- `src/bee_ingestion/agent.py` has been patched so `_summarize_session_memory()` calls `_grounding_evidence_rows(...)` with the current full KG-evidence signature:
+  - `assertion_map`
+  - `evidence_map`
+  - `used_evidence_ids`
+- Root cause:
+  - `_grounding_evidence_rows(...)` was expanded during KG evidence work, but the session-memory summarization call site still used the older shorter argument list
+- User-visible effect:
+  - fixes the `POST /agent/chat` 500 raised immediately after sending a message
+- Status:
+  - on disk
+  - validation pending via focused regressions and live chat smoke
+
+[2026-04-21 15:32 EEST] Agent chat runtime crash fix validated and live.
+- Validation completed:
+  - `docker compose exec -T api python -m pytest tests/test_agent.py tests/test_api.py -q`
+  - result: `59 passed`
+  - live smoke through the real FastAPI path:
+    - login succeeded
+    - `POST /agent/chat` returned `200`
+    - response included an answer body
+- Additional drift check:
+  - `_grounding_evidence_rows(...)` now has only two call sites in `src/bee_ingestion/agent.py`
+  - both match the current full signature
+  - no adjacent stale call-site mismatch was found in the focused retrieval/memory path
+
+[2026-04-21 15:39 EEST] Corpus validation strictness reduction landed on disk.
+- Root cause isolated:
+  - the deterministic validator in `src/bee_ingestion/validation.py`, not the reviewer prompt, was the main source of over-review
+  - specifically, any `3-10` word chunk under `160` chars was being pushed toward `review` via blanket `too_few_words` handling
+- Validator changes:
+  - narrowed the patch to status mapping only
+  - short coherent body chunks are auto-accepted only when they are:
+    - `body` role
+    - `3-10` words
+    - at least `32` chars
+    - sentence-like
+    - and their reason set is limited to `too_few_words` plus optional `missing_section`
+  - scoring remains unchanged
+  - front matter / contents / back matter / heading-only / OCR-noisy chunks remain conservative
+- Reviewer/settings changes:
+  - reverted the earlier prompt loosening and prompt-version bump to keep the patch narrowly scoped to the deterministic validator
+- Regression updates:
+  - restored the old short-snippet guard test
+  - added explicit positive coverage for short coherent body sentences with and without section context
+  - added a guard test to keep sentence-less short fragments in review
+- Status:
+  - on disk
+  - validation pending via focused chunking/service regressions
+
+[2026-04-21 15:46 EEST] Corpus validation strictness reduction validated and live.
+- Regression validation passed:
+  - `docker compose exec -T api python -m pytest tests/test_chunking.py tests/test_service.py -q`
+  - result: `39 passed`
+  - `py_compile` passed for:
+    - `src/bee_ingestion/validation.py`
+    - `src/bee_ingestion/reviewer.py`
+    - `src/bee_ingestion/settings.py`
+- Live rollout:
+  - API restarted successfully
+  - health check returned `ok`
+- Post-restart behavior probe:
+  - `SPRING MANAGEMENT / Inspect brood before adding supers.` -> `accepted`
+  - `Inspect brood before adding supers.` -> `accepted`
+  - same text without sentence punctuation -> `review`
+- Effective outcome:
+  - short coherent body snippets are no longer blanket-forced into `review`
+  - unsupported short fragments remain conservative
+
+[2026-04-21 15:53 EEST] Grounding gate degradation patch landed on disk.
+- Root cause isolated:
+  - answer refusals were often happening after retrieval, inside the claim-verifier grounding gate
+  - `src/bee_ingestion/agent.py` treated any `claim_verifier_error` as `passed = false`, which forced abstention even when lexical grounding against retrieved chunks/evidence would have succeeded
+- Patch:
+  - `_verify_answer_grounding(...)` now falls back to lexical grounding when the verifier returns `claim_verifier_error`
+  - the response still records the verifier outage in `grounding_check.verifier_fallback_reason` and `grounding_check.verifier_error`
+  - this does not make the system answer blindly; it still abstains if lexical grounding fails
+- Regression updates:
+  - added agent test coverage for verifier-error -> lexical-grounding fallback
+- Status:
+  - on disk
+  - validation pending via focused agent regressions and live chat smoke
+
+[2026-04-21 16:01 EEST] Answer prompt narrowing landed on disk.
+- Reason:
+  - after fixing verifier-error fallback, live abstentions still showed the answer model overclaiming beyond the retrieved evidence bundle
+  - this was not a retrieval miss; it was answer synthesis overshooting the evidence
+- Change:
+  - `src/bee_ingestion/settings.py`
+    - bumped `agent_prompt_version` from `v1` to `v2`
+    - tightened `agent_system_prompt` so the answer model must:
+      - prefer narrower partial answers over broader unsupported process descriptions
+      - state a process step only when directly supported by the evidence bundle
+      - answer with only the supported subset when support is partial
+      - avoid meta-claims like “all points are supported by the cited sources”
+- Status:
+  - on disk
+  - validation pending via focused regressions and live chat smoke
+
+[2026-04-21 16:05 EEST] Grounding gate degradation patch validated and live.
+- Validation completed:
+  - `docker compose exec -T api python -m pytest tests/test_agent.py -q`
+  - result: `28 passed`
+  - `py_compile` passed for `src/bee_ingestion/agent.py`
+- Live rollout:
+  - API restarted successfully
+  - health check returned `ok`
+- Live smoke result:
+  - verifier outages no longer force an immediate hard abstention path
+  - `grounding_check.method` now degrades to `lexical_fallback` with:
+    - `verifier_fallback_reason = claim_verifier_error`
+    - structured verifier error metadata preserved in the response
+  - note: the tested question still abstained because lexical grounding itself failed, not because of the verifier outage
+
+[2026-04-21 16:06 EEST] Answer prompt narrowing validated and live.
+- Validation completed:
+  - `py_compile` passed for `src/bee_ingestion/settings.py`
+  - API restarted successfully
+  - health check returned `ok`
+- Live smoke comparison on `How do bees produce honey?`:
+  - before prompt narrowing:
+    - lexical fallback `supported_ratio = 0.1667`
+    - `5` unsupported claims
+  - after prompt narrowing:
+    - lexical fallback `supported_ratio = 0.4`
+    - `3` unsupported claims
+- Outcome:
+  - the answer model is staying closer to the retrieved evidence bundle
+  - but the question still does not pass lexical grounding yet, so the user-visible response remains an abstention
+  - the remaining bottleneck is lexical grounding strictness and/or explanation retrieval breadth, not verifier transport failure
+
+[2026-04-21 16:12 EEST] Supported-subset grounding fallback landed on disk.
+- Reason:
+  - even after verifier-error fallback and prompt narrowing, explanation answers were still fully abstaining when only part of the explanation was grounded
+  - this was too strict for descriptive/process questions
+- Change:
+  - `src/bee_ingestion/agent.py`
+    - `_finalize_response(...)` now converts certain partially grounded explanation/procedure/comparison answers into a narrower supported-subset answer instead of forcing a full abstention
+    - added `_build_supported_subset_answer(...)`
+  - bounded behavior:
+    - only applies to `explanation`, `procedure`, and `comparison`
+    - only when grounding method is `lexical_fallback`
+    - only when there is at least one supported claim and `supported_ratio >= 0.34`
+    - blocked if unsupported claims contain numeric content
+    - result remains `needs_review` via `lexical_supported_subset`
+- Regression updates:
+  - added tests for:
+    - supported-subset answer construction
+    - numeric unsupported-claim guard
+    - end-to-end partial-grounding conversion in agent query
+- Status:
+  - on disk
+  - validation pending via focused agent regressions and live smoke
+
+[2026-04-21 16:26 EEST] Query-type-aware lexical grounding relaxation landed on disk.
+- Reason:
+  - explanation/process/comparison answers were still being gated by the same lexical threshold as strict factual claims
+  - that was causing full abstentions even when most of the explanation was supported
+- Change:
+  - `src/bee_ingestion/agent.py`
+    - `_lexical_grounding_check(...)` now accepts `question_type`
+    - for `explanation`, `procedure`, and `comparison`:
+      - uses the configured support ratio instead of forcing a hard `0.75` floor
+      - allows at most one unsupported non-numeric claim when there are at least three claims
+      - still hard-fails on unsupported numeric claims
+    - `_verify_answer_grounding(...)` and `_finalize_response(...)` now thread `question_type` through the grounding path
+    - `_build_supported_subset_answer(...)` threshold lowered from `0.34` to `0.25`
+  - `tests/test_agent.py`
+    - added focused regressions for relaxed explanation grounding and strict fact grounding
+- Status:
+  - on disk
+  - validation pending via focused agent regressions and live chat smoke
+
+[2026-04-21 16:33 EEST] Supported-subset fallback broadened to partial claim-verifier results.
+- Reason:
+  - live smoke showed the answer was still abstaining because `claim_verifier` itself returned `passed = false` with `supported_ratio = 0.8` and one unsupported non-numeric explanatory step
+  - the lexical relaxation alone was not enough because supported-subset fallback only applied to `lexical_fallback`
+- Change:
+  - `src/bee_ingestion/agent.py`
+    - `_finalize_response(...)` now applies supported-subset fallback to partial `claim_verifier` results as well as `lexical_fallback`
+    - normalized fallback method to `supported_subset`
+    - preserves `original_method` for review/debugging
+    - keeps supported-subset answers in `needs_review`
+  - `tests/test_agent.py`
+    - updated the partial-grounding expectation to `supported_subset`
+    - added a focused regression for partial `claim_verifier` support on an explanation answer
+- Status:
+  - on disk
+  - validation pending via focused agent regressions and live chat smoke
+
+[2026-04-21 16:37 EEST] Grounding relaxation and supported-subset flow validated and live.
+- Validation completed:
+  - `docker compose exec -T api python -m pytest tests/test_agent.py -q`
+  - result: `34 passed`
+  - `docker compose exec -T api python -m py_compile /app/src/bee_ingestion/agent.py`
+  - API restarted successfully
+  - health check returned `ok`
+- Live smoke on `How do bees produce honey?`:
+  - login path returned `200`
+  - `POST /agent/chat` returned `200`
+  - user-visible behavior changed from full abstention to bounded supported-subset answer
+  - `grounding_check.method = supported_subset`
+  - `grounding_check.original_method = lexical_fallback`
+  - `grounding_check.passed = true`
+  - `supported_ratio = 0.4`
+  - `review_status = needs_review`
+- Outcome:
+  - explanation/process questions no longer fail closed as aggressively when most of the answer is supported
+  - strict handling remains in place for unsupported numeric claims and factual question types
+  - the remaining quality issue is answer phrasing polish, not a hard-support gate failure
+
+[2026-04-21 16:43 EEST] Supported-subset answer phrasing and fallback scope broadened on disk.
+- Reason:
+  - supported-subset answers were still reading like backend disclaimers
+  - non-numeric fact/definition answers were still dying too often on one unsupported extra clause
+- Change:
+  - `src/bee_ingestion/agent.py`
+    - cleaned meta prefixes like `Based on the provided sources:` out of supported-subset claim text
+    - removed the canned `Based on the indexed corpus, I can support this much:` rewrite
+    - question-type-specific fallback tails now read like normal answers
+    - supported-subset fallback now also applies to `definition` and `fact`
+    - still blocked for `source_lookup`, `visual_lookup`, and unsupported numeric claims
+  - `tests/test_agent.py`
+    - added focused coverage for fact-level supported-subset fallback and non-meta phrasing
+- Status:
+  - on disk
+  - validation pending via focused agent regressions and live smoke
+
+[2026-04-21 16:48 EEST] Broader fallback and phrasing cleanup validated and live.
+- Validation completed:
+  - `docker compose exec -T api python -m pytest tests/test_agent.py -q`
+  - result: `36 passed`
+  - `docker compose exec -T api python -m py_compile /app/src/bee_ingestion/agent.py`
+  - API restarted successfully
+  - health check returned `ok`
+- Live smoke:
+  - `How do bees produce honey?`
+    - `POST /agent/chat` returned `200`
+    - `abstained = false`
+    - `grounding_check.method = lexical_fallback`
+    - `grounding_check.passed = true`
+    - `supported_ratio = 0.75`
+  - `What is varroa destructor?`
+    - `POST /agent/chat` returned `200`
+    - `abstained = false`
+    - `grounding_check.method = supported_subset`
+    - `grounding_check.original_method = lexical_fallback`
+    - `grounding_check.passed = true`
+    - `supported_ratio = 0.6667`
+- Outcome:
+  - the backend is no longer rejecting these representative explanation/fact answers by default
+  - numeric and source-lookup style answers remain intentionally stricter
+  - one remaining tone issue is model-side phrasing such as `Based on the provided sources:` when the raw answer itself passes grounding
+
+[2026-04-21 16:59 EEST] Claim verifier world-knowledge support landed on disk.
+- Reason:
+  - the verifier was still operating as if every supported claim had to map to corpus evidence ids
+  - that made `allow general world knowledge` impossible as a real behavior change, not just a prompt tweak
+- Change:
+  - `src/bee_ingestion/settings.py`
+    - verifier system prompt now distinguishes:
+      - `support_basis = evidence`
+      - `support_basis = world_knowledge`
+    - world knowledge is allowed only for general background claims and explicitly disallowed for precise numeric/date/source-specific claims
+  - `src/bee_ingestion/agent.py`
+    - verifier result parsing now accepts supported claims with `support_basis = world_knowledge` even when `evidence_ids` are empty
+    - unsupported numeric claims still do not qualify for world-knowledge support
+    - `grounding_check` now records `world_knowledge_claims`
+    - review state now keeps world-knowledge-supported answers in `needs_review`
+- Status:
+  - on disk
+  - validation pending via focused agent regressions and live smoke
+
+[2026-04-21 17:06 EEST] Hard abstention on weak grounding removed in favor of open-world fallback.
+- Reason:
+  - the product requirement changed: the agent should still answer even when corpus grounding is weak or absent
+  - continuing to use grounding as a hard reject gate was now working against the intended behavior
+- Change:
+  - `src/bee_ingestion/agent.py`
+    - `_finalize_response(...)` no longer forces abstention on weak grounding if:
+      - the model produced a non-empty answer
+      - confidence is at or above `min_answer_confidence`
+    - citationless answers are now allowed in that fallback mode
+    - `grounding_check.open_world_fallback_used = true` marks these responses
+    - `_derive_agent_review_state(...)` marks them as `needs_review` with reason `open_world_fallback`
+- Intended behavior:
+  - grounded answers still work when available
+  - unsupported/weakly grounded answers no longer fail closed
+  - the system still exposes which answers are open-world rather than corpus-grounded
+- Status:
+  - on disk
+  - validation pending via focused regressions and live smoke
+
+[2026-04-21 17:12 EEST] Open-world fallback and verifier world-knowledge support validated and live.
+- Validation completed:
+  - `docker compose exec -T api python -m pytest tests/test_agent.py -q`
+  - result: `40 passed`
+  - `docker compose exec -T api python -m py_compile /app/src/bee_ingestion/agent.py /app/src/bee_ingestion/settings.py`
+  - API restarted successfully
+  - health check returned `ok`
+- Live smoke:
+  - `How do bees produce honey?`
+    - `abstained = false`
+    - `grounding_check.method = supported_subset`
+    - `supported_ratio = 0.6667`
+  - `What is varroa destructor?`
+    - `abstained = false`
+    - `grounding_check.method = supported_subset`
+    - `supported_ratio = 0.4`
+  - `Tell me something useful about lunar eclipses.`
+    - still `abstained = true`
+    - blocker is now `low_confidence`, not weak-grounding rejection
+- Outcome:
+  - weak grounding no longer forces failure by default
+  - verifier can now count safe general-domain support via `support_basis = world_knowledge`
+  - if the product requirement is truly `always answer`, the next step is a second-pass general-answer fallback for low-confidence or model-abstained responses
+
+[2026-04-21 17:21 EEST] Second-pass open-world answer path and fallback-summary cleanup landed on disk.
+- Reason:
+  - the product requirement is now `always answer`, not `only answer when corpus grounding passes`
+  - off-corpus and low-confidence cases still failed because they never reached a separate open-world answer mode
+  - hard answer-model failures still produced ugly truncated evidence-summary text
+- Change:
+  - `src/bee_ingestion/settings.py`
+    - added a dedicated open-world fallback system prompt and runtime knobs
+  - `src/bee_ingestion/agent_runtime.py`
+    - exposed open-world fallback prompt/config fields in runtime config
+  - `src/bee_ingestion/agent.py`
+    - added `_generate_open_world_answer(...)`
+    - added `_run_open_world_fallback(...)`
+    - no-retrieval branch now attempts an open-world answer before returning `no_retrieval_results`
+    - low-confidence / model-abstained / no-valid-citations / weak-grounding first-pass responses now trigger a second-pass open-world answer
+    - first-pass model-call failures now attempt the open-world answer path before degrading to deterministic evidence summary
+    - open-world answers are explicitly marked in `grounding_check` and review state
+    - deterministic evidence-summary fallback now uses cleaner excerpts and removes repeated label prefixes
+- Status:
+  - on disk
+  - validation pending via focused regressions and live smoke
+
+[2026-04-21 17:29 EEST] User-facing answer tone softening landed on disk.
+- Reason:
+  - the answers still sounded too robotic and system-like for everyday beekeepers/farmers
+  - phrases like `Based on the provided sources:` were still leaking into the user-visible answer
+- Change:
+  - `src/bee_ingestion/settings.py`
+    - grounded and open-world system prompts now explicitly ask for plain, practical, human language
+    - prompts now tell the model not to mention corpus/evidence/source machinery unless the user asks
+  - `src/bee_ingestion/agent.py`
+    - `_finalize_response(...)` now cleans user-facing answer text before returning it
+    - added `_clean_user_facing_answer_text(...)`
+    - expanded `_clean_supported_subset_claim_text(...)` to strip more meta prefixes
+    - supported-subset fallback tails now use simpler wording like `I can't be sure about the rest`
+    - the hard abstention message is now shorter and more human
+- Status:
+  - on disk
+  - validation pending via focused regressions and live smoke
+
+[2026-04-21 17:35 EEST] Open-world answering and tone softening validated and live.
+- Validation completed:
+  - `docker compose exec -T api python -m pytest tests/test_agent.py -q`
+  - result: `41 passed`
+  - `docker compose exec -T api python -m py_compile /app/src/bee_ingestion/agent.py /app/src/bee_ingestion/settings.py /app/src/bee_ingestion/agent_runtime.py`
+  - API restarted successfully
+  - health check returned `ok`
+- Live smoke:
+  - `How do bees produce honey?`
+    - `abstained = false`
+    - tone no longer includes source/corpus meta language
+    - current answer is plain but still somewhat terse because it is using `supported_subset`
+  - `Tell me something useful about lunar eclipses.`
+    - `abstained = false`
+    - `review_reason = open_world_answer`
+    - off-corpus questions now answer instead of failing closed
+  - `What is varroa destructor?`
+    - `abstained = false`
+    - plainer wording than before
+- Outcome:
+  - the agent now answers even for off-corpus questions
+  - user-visible tone is less robotic and less system-like
+  - remaining quality work is style polish and answer-shaping, not the old hard-failure behavior
+
+[2026-04-21 16:56 +03:00] Main answer model upgraded from `gpt-5-mini` to `gpt-5.4`; `reasoning_effort` raised from `minimal` to `high`.
+- Note:
+  - open-world fallback currently shares the same runtime model/config for now; split it later only if we need a separate fallback policy.
+
+[2026-04-22 16:38:37 +03:00] Public agent session surface expanded for ChatGPT-style general chat.
+- Added:
+  - workspace-kind tagging on sessions
+  - public session list endpoint
+  - lazy session activation endpoint
+  - lazy message/session-memory loading only for the selected session
+
+[2026-04-22 16:44:29 +03:00] General chat React UI now supports ChatGPT-style conversation history.
+- Added:
+  - lazy session activation in the chat flow
+  - a session memory panel
+  - sidebar metadata-only loading for unselected chats
+- Status:
+  - on disk
+  - validation pending
+
+[2026-04-22 16:48:58 +03:00] Validation recorded for general-chat history feature.
+- Validation:
+  - frontend build passed
+  - local py_compile passed for api/agent/repository
+  - `tests/test_agent.py` passed (`41`)
+  - focused public session API tests passed (`2`)
+  - Docker/runtime validation blocked because the Docker daemon is down
+
+[2026-04-22 16:59:24 +03:00] Live runtime validation completed for general-chat history.
+- Validation:
+  - API health was ok
+  - two real general sessions were created
+  - `/agent/sessions` returned metadata-only rows with no `messages` field
+  - `/agent/sessions/{id}/activate` loaded the selected session transcript and session memory on demand
+[2026-04-22 17:08:18 +03:00] Removed the last backend corpus-refusal path.
+- Patched `src/bee_ingestion/agent.py` so the service no longer returns `I do not have enough indexed evidence in this corpus to answer that reliably.` on no-retrieval requests.
+- Added a guaranteed `last_resort_fallback` response path for:
+  - no-retrieval requests when open-world answering fails
+  - open-world answers that still come back abstaining/empty
+  - model-failure paths that previously degraded into abstaining fallback summaries
+- Persisted these cases as non-abstaining `needs_review` answers instead of hard refusals.
+
+[2026-04-22 17:08:54 +03:00] Removed all suggested-question UI from the user chat surface.
+- Deleted the general assistant starter prompts, including the nectar->honey suggestion.
+- Removed the quick-prompt chip row from `frontend/src/features/chat/PublicChatPage.tsx`.
+- New chats now open with an empty composer and no suggested questions in either general or hive mode.
+
+[2026-04-22 17:11:01 +03:00] Validated the non-refusal patch and the no-suggestions UI state.
+- `tests/test_agent.py` passed with the new last-resort fallback regressions: `42 passed`.
+- Frontend production build passed after removing the prompt chips.
+- Restarted `n8ntopython-api-1`; `/health` and `/app` returned `200`/`ok`.
+- Verified the old corpus-refusal string and the nectar starter text are absent from source/build artifacts.
+
+[2026-04-22 17:17:20 +03:00] Tightened memory boundaries for general chat prompts.
+- Confirmed the memory stack has two layers:
+  - session memory keyed by `session_id`
+  - shared profile memory keyed by `profile_id/auth_user_id`
+- Patched `src/bee_ingestion/agent.py` so general-chat prompt building no longer injects content-bearing shared profile memory (`recurring_topics`, `learning_goals`, `answer_preferences`) across chats.
+- Session memory remains active and chat-scoped; the shared profile layer is now reduced to non-content profile fields in general chat to prevent cross-chat topic bleed.
+
+[2026-04-22 17:18:26 +03:00] Removed remaining uncertainty phrasing from answer shaping.
+- Patched `src/bee_ingestion/settings.py` to stop instructing the model to hedge or abstain for thin evidence cases.
+- Patched `src/bee_ingestion/agent.py` so supported-subset answers no longer append `I can't be sure...`.
+- Added user-facing answer cleanup for leading hedges like `I think`, `I'm not sure`, and `It seems`.
+
+[2026-04-22 17:20:22 +03:00] Validated the memory-boundary and confident-answer patches.
+- `tests/test_agent.py` passed: `43 passed`.
+- `py_compile` passed for `src/bee_ingestion/agent.py` and `src/bee_ingestion/settings.py`.
+- Restarted `n8ntopython-api-1`; `/health` returned `ok`.
+- General-chat prompts now keep session memory but strip shared profile topics/goals/preferences before injection.
+
+[2026-04-22 17:47:22 +03:00] Reset agent chat state for release hygiene.
+- Purged agent chat/runtime data from Postgres:
+  - `agent_answer_reviews`
+  - `agent_query_sources`
+  - `agent_query_runs`
+  - `agent_messages`
+  - `agent_session_memories`
+  - `agent_sessions`
+  - `agent_query_patterns`
+  - `agent_query_embeddings`
+- Preserved auth/runtime configuration.
+- Kept `agent_profiles` rows but zeroed `summary_json` and `summary_text` for all profiles so no old cross-chat content survives release.
+
+[2026-04-22 18:13:23 +03:00] Fixed general-chat UI session race conditions.
+- Patched `frontend/src/features/chat/PublicChatPage.tsx` so:
+  - in-flight answers from an old chat cannot rebind the UI after `New chat` or other workspace resets
+  - stale `sessionSnapshot` no longer auto-reactivates an old session right after clearing the workspace
+  - `New chat` is disabled while a send is in flight
+- This closes the bug where sending in chat A and then clicking `New chat` caused the answer to appear in the new chat view.
+- This also removes the main UI-side cause of chat/memory confusion, because session memory updates now stay aligned with the session the request was sent on.
+
+[2026-04-22 18:18:13 +03:00] Added ChatGPT-style draft chat behavior and Enter-to-send.
+- Patched `frontend/src/features/chat/PublicChatPage.tsx` so clicking `New chat` creates a visible draft conversation row immediately, before the first message is sent.
+- The first send from that draft still creates the real backend `agent_sessions` row, then replaces the draft with the persisted session.
+- Added Enter-to-send for the composer (`Shift+Enter` still keeps multiline entry).
+- Disabled the remaining reset/new-conversation buttons while a send is in flight so the race cannot reappear through another button.
+
+[2026-04-22 18:25:31 +03:00] Hardened agent persistence ownership beyond `session_id`.
+- Patched `sql/schema.sql` and `src/bee_ingestion/repository.py` so these tables now carry explicit ownership columns:
+  - `agent_messages`: `profile_id`, `auth_user_id`
+  - `agent_query_runs`: `profile_id`, `auth_user_id`
+  - `agent_session_memories`: `profile_id`, `auth_user_id`
+- Runtime migrations now:
+  - add the columns on existing databases
+  - backfill them from `agent_sessions`
+  - add owner-oriented indexes
+- New writes now copy ownership from `agent_sessions` at persist time, so row-level ownership is explicit instead of only implicit through `session_id`.
+
+[2026-04-22 18:47:50 +03:00] Added owner-scoped read filters and closed the remaining legacy helper writes.
+- Patched `src/bee_ingestion/repository.py` so the remaining helper entry points `save_agent_message()` and `save_agent_query_run()` now persist `profile_id` and `auth_user_id`, not just `session_id`.
+- Added optional `auth_user_id` / `profile_id` filters to session-memory, message, latest-scope, and query-run read paths so public chat reads can be owner-scoped as well as session-scoped.
+- Patched `src/bee_ingestion/agent.py` and `src/bee_ingestion/api.py` so the public/general-chat path now passes owner context when hydrating prior messages, session memory, session scope, activated chat transcripts, and user feedback detail.
+- This makes the public chat path defend on both layers:
+  - session token + session lease for conversation isolation
+  - explicit owner filters for persisted transcript and memory reads
+
+[2026-04-22 18:54:09 +03:00] Validated owner-scoped memory persistence live against the running stack.
+- Restarted the API and verified `/health` returned `ok`.
+- Ran a container-local repository smoke that:
+  - created a profile and session for a synthetic authenticated user
+  - wrote a message row, query-run row, and session-memory row
+  - verified all three rows stored `session_id`, `profile_id`, and `auth_user_id`
+  - verified owner-scoped reads succeed for the correct owner and return nothing for a wrong owner
+  - cleaned up the smoke rows afterward
+- Live smoke result:
+  - `messages=1`, `messages_wrong_owner=0`
+  - `memory_present=true`, `memory_wrong_owner=false`
+  - `runs=1`, `runs_wrong_owner=0`
+  - `detail_present=true`, `detail_wrong_owner=false`
+
+[2026-04-22 19:07:04 +03:00] Patched structured-answer failure fallback and citation persistence on refresh.
+- `src/bee_ingestion/agent.py`
+  - hardened `_extract_message_content()` so it also accepts nested content parts and parsed structured payloads
+  - changed `_coerce_agent_response()` to recover from plain-text / malformed JSON model output instead of immediately dropping to the chunk-text last-resort path
+  - when recovery is needed, it now synthesizes a normal answer payload from the model text and seeds citations from the selected retrieval bundle
+  - persisted full `citations_payload` into assistant message metadata so refresh can rebuild citation cards
+- `frontend/src/features/chat/PublicChatPage.tsx`
+  - session rehydration now restores stored citation cards from assistant `metadata_json.citations_payload`
+- This addresses the two live symptoms reported in the UI:
+  - model output occasionally falling through to raw chunk summaries
+  - citation cards disappearing after refresh even though the answer was stored
+
+[2026-04-22 19:12:41 +03:00] Added explicit plain-text recovery when structured `gpt-5.4` output is empty.
+- The live Varroa smoke showed the real failure mode was stricter than malformed JSON: both the main answer path and the open-world path were returning empty content under structured-output mode.
+- Patched `src/bee_ingestion/agent.py` so both `_generate_answer()` and `_generate_open_world_answer()` now:
+  - try structured JSON mode first
+  - if the model returns empty content, immediately retry with the same context in plain-text mode
+  - hand that plain-text answer back through the existing response finalizer instead of falling straight to chunk-summary fallback
+- This directly targets the current release blocker: retrieval was good, but `gpt-5.4` structured output was intermittently empty.
+
+[2026-04-22 19:18:56 +03:00] Added stable answer-model fallback for empty `gpt-5.4` responses.
+- The plain-text retry still showed `gpt-5.4` returning empty content in the live Varroa path.
+- Patched `src/bee_ingestion/settings.py`, `src/bee_ingestion/agent_runtime.py`, and `src/bee_ingestion/agent.py` so answer generation now uses:
+  - primary answer model: configured `agent_model` (`gpt-5.4`)
+  - automatic fallback answer model on empty content: configured `agent_fallback_model` (`gpt-5-mini`)
+- This fallback is applied to both:
+  - the main grounded answer generation path
+  - the open-world fallback answer path
+- The purpose is pragmatic: do not let an empty high-reasoning model response force the UI into raw chunk-summary mode.
+
+[2026-04-22 19:27:14 +03:00] Reverted the default release answer model back to the stable path.
+- Live smokes still showed `gpt-5.4` emptying out on the answer path even after structured-output recovery and fallback-model work.
+- For release stability, `src/bee_ingestion/settings.py` now sets:
+  - `agent_model = gpt-5-mini`
+  - `agent_reasoning_effort = medium`
+- `gpt-5.4` fallback handling remains in code, but it is no longer the default release model.
+- This is a deliberate stability-over-ambition call: shipping with an intermittently empty primary answer model would keep forcing fallback answers in the UI.
+
+[2026-04-22 19:31:42 +03:00] Identified the real answer-path failure: completion budget was being consumed by hidden reasoning.
+- A direct raw OpenAI smoke against `gpt-5-mini` showed:
+  - `finish_reason = length`
+  - `completion_tokens_details.reasoning_tokens = 120`
+  - `message.content = ""`
+- That means the model was not refusing; it was spending the entire completion budget on reasoning and returning no visible answer.
+- For release stability, `src/bee_ingestion/settings.py` now sets:
+  - `agent_reasoning_effort = low`
+  - `agent_fallback_reasoning_effort = low`
+- This is the correct fix for the observed failure mode. Parser and fallback handling stay in place, but the answer path now asks the model to spend fewer hidden tokens so it actually returns visible content.
+
+[2026-04-22 19:36:28 +03:00] Validated the release answer path end to end after lowering reasoning effort.
+- Restarted the API and reran the same live Varroa smoke that had previously fallen into `last_resort_fallback`.
+- New live result:
+  - `review_reason = supported_subset`
+  - `grounding_method = supported_subset`
+  - answer starts with a real direct explanation: `Varroa is a parasitic mite that attacks honey-bees...`
+  - `citations = 5`
+- Verified persistence for refresh:
+  - the latest assistant `agent_messages` row now stores `metadata_json.citations_payload = true`
+  - this is what the React chat uses to rebuild citation cards on session rehydrate
+- Validation gates after the patch:
+  - `tests/test_agent.py` -> `45 passed`
+  - frontend production build passed
+
+[2026-04-23 14:53:00 +03:00] Cleared all pre-release chat history and memory state for a clean launch surface.
+- Deleted user-facing chat-state rows from:
+  - `agent_sessions`
+  - `agent_session_memories`
+  - `agent_messages`
+  - `agent_query_runs`
+  - `agent_query_sources`
+  - `agent_answer_reviews`
+  - `agent_query_patterns`
+  - `agent_query_embeddings`
+- Reset all `agent_profiles` summaries to empty so stale cross-chat profile memory does not leak into release testing.
+- Verified post-cleanup state:
+  - all chat-state tables above are at `0` rows
+  - profile summaries with non-empty content are `0`
+  - API health is still `ok`

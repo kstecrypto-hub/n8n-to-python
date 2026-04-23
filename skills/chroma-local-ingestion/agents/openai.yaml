@@ -1,0 +1,3 @@
+interface:
+  display_name: "Chroma Local Ingestion"
+  short_description: "Design fully local ChromaDB vector store ingestion pipelines for agents"

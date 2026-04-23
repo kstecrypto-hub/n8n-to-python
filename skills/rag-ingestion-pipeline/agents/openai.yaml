@@ -1,0 +1,4 @@
+version: 1
+display_name: RAG Ingestion Pipeline
+short_description: Design ontology-aware, metadata-rich ingestion pipelines for strong RAG and GraphRAG retrieval.
+default_prompt: Design or improve the ingestion pipeline for this RAG system. Inventory the sources, choose normalization and chunking, define metadata and ontology or KG usage, choose the embedding and index strategy, and specify update and evaluation loops.

@@ -1,0 +1,20 @@
+﻿{
+    "documents":  7,
+    "jobs":  7,
+    "pages":  1159,
+    "page_assets":  1345,
+    "chunks":  4876,
+    "accepted_chunks":  3570,
+    "review_chunks":  707,
+    "rejected_chunks":  599,
+    "kg_entities":  1251,
+    "kg_assertions":  2044,
+    "kg_raw_extractions":  3570,
+    "kg_review_extractions":  0,
+    "kg_skipped_extractions":  2188,
+    "kg_quarantined_extractions":  329,
+    "agent_sessions":  15,
+    "agent_query_runs":  6,
+    "agent_abstentions":  5,
+    "agent_review_queue":  5
+}
