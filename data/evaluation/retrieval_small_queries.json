@@ -1,0 +1,43 @@
+[
+  {
+    "id": "queen-mating-dadant",
+    "tenant_id": "retrieval-eval-20260324",
+    "query": "How does the queen mate and what happens after mating?",
+    "expected_document_filenames": ["DadantFirstLessonsInBeekeeping.pdf"],
+    "expected_terms": ["queen", "mating", "impregnated", "spermatheca"],
+    "min_term_coverage": 0.5,
+    "expect_assets": false
+  },
+  {
+    "id": "pollen-role-dadant",
+    "tenant_id": "retrieval-eval-20260324",
+    "query": "How do bees use pollen and why is it important to the colony?",
+    "expected_document_filenames": ["DadantFirstLessonsInBeekeeping.pdf"],
+    "expected_terms": ["pollen", "colony", "bees"],
+    "min_term_coverage": 0.34,
+    "expect_assets": false
+  },
+  {
+    "id": "straw-skeps-cu319",
+    "tenant_id": "retrieval-eval-20260324",
+    "query": "What are the advantages and limitations of straw skeps?",
+    "expected_document_filenames": ["cu31924066723143.pdf"],
+    "expected_terms": ["straw", "skep", "hive"],
+    "min_term_coverage": 0.34,
+    "expect_assets": false
+  },
+  {
+    "id": "visual-scan-honeybee",
+    "tenant_id": "retrieval-eval-20260324",
+    "query": "Describe the visual or scanned content available in this sample and cite the image evidence.",
+    "scope_document_filenames": ["honeybeeitsnatur00cowa_bw.pdf"],
+    "expected_document_filenames": ["honeybeeitsnatur00cowa_bw.pdf"],
+    "expected_terms": ["harvard", "museum", "library"],
+    "expected_asset_terms": ["harvard", "museum", "library", "seal"],
+    "min_term_coverage": 0.0,
+    "expect_assets": true,
+    "min_selected_assets": 1,
+    "min_asset_link_confidence": 0.68,
+    "max_selected_documents": 1
+  }
+]

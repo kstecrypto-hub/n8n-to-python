@@ -1,0 +1,85 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bee_ingestion}
+      POSTGRES_USER: ${POSTGRES_USER:-bee}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bee}
+    ports:
+      - "127.0.0.1:35432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bee} -d ${POSTGRES_DB:-bee_ingestion}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  auth-postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${AUTH_POSTGRES_DB:-bee_identity}
+      POSTGRES_USER: ${AUTH_POSTGRES_USER:-bee_auth}
+      POSTGRES_PASSWORD: ${AUTH_POSTGRES_PASSWORD:-bee_auth}
+    ports:
+      - "127.0.0.1:35433:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+      - ./sql/identity_schema.sql:/docker-entrypoint-initdb.d/001-identity-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_POSTGRES_USER:-bee_auth} -d ${AUTH_POSTGRES_DB:-bee_identity}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  chroma:
+    image: chromadb/chroma:1.0.12
+    ports:
+      - "127.0.0.1:38101:8000"
+    volumes:
+      - chroma_data:/data
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: /data
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-postgres:
+        condition: service_healthy
+      chroma:
+        condition: service_started
+    ports:
+      - "127.0.0.1:38100:8000"
+    volumes:
+      - ./:/app
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-postgres:
+        condition: service_healthy
+      chroma:
+        condition: service_started
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+    command: ["python", "-m", "src.bee_ingestion.cli", "--help"]
+
+volumes:
+  postgres_data:
+  auth_postgres_data:
+  chroma_data:

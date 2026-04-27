@@ -1,0 +1,611 @@
+@base <https://yourdomain.tld/ontologies/beecore#> .
+@prefix beecore: <https://yourdomain.tld/ontologies/beecore#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+beecore: a owl:Ontology ;
+  rdfs:label "BeeCore" ;
+  owl:versionInfo "0.3.1" ;
+  dcterms:description "Corpus-shaped ontology for beekeeping books covering colony biology, hive structure, equipment, products, forage, health, and management actions." .
+
+##########
+# Classes
+##########
+
+beecore:Apiary a owl:Class ;
+  rdfs:label "Apiary" ;
+  skos:altLabel "bee yard" .
+
+beecore:ApiarySite a owl:Class ;
+  rdfs:label "Apiary site" ;
+  skos:altLabel "bee yard site" ;
+  skos:altLabel "stand" .
+
+beecore:Colony a owl:Class ;
+  rdfs:label "Colony" ;
+  skos:altLabel "bee colony" .
+
+beecore:NucleusColony a owl:Class ;
+  rdfs:subClassOf beecore:Colony ;
+  rdfs:label "Nucleus colony" ;
+  skos:altLabel "nuc" ;
+  skos:altLabel "nucleus" .
+
+beecore:PackageBees a owl:Class ;
+  rdfs:label "Package bees" ;
+  skos:altLabel "package" ;
+  skos:altLabel "bee package" .
+
+beecore:Swarm a owl:Class ;
+  rdfs:label "Swarm" ;
+  skos:altLabel "bee swarm" .
+
+beecore:Bee a owl:Class ;
+  rdfs:label "Bee" .
+
+beecore:HoneyBee a owl:Class ;
+  rdfs:subClassOf beecore:Bee ;
+  rdfs:label "Honey bee" ;
+  skos:altLabel "honeybee" .
+
+beecore:StinglessBee a owl:Class ;
+  rdfs:subClassOf beecore:Bee ;
+  rdfs:label "Stingless bee" ;
+  skos:altLabel "meliponine bee" .
+
+beecore:Queen a owl:Class ;
+  rdfs:subClassOf beecore:Bee ;
+  rdfs:label "Queen" ;
+  skos:altLabel "queen bee" ;
+  skos:altLabel "mother bee" .
+
+beecore:Worker a owl:Class ;
+  rdfs:subClassOf beecore:Bee ;
+  rdfs:label "Worker" ;
+  skos:altLabel "worker bee" .
+
+beecore:Drone a owl:Class ;
+  rdfs:subClassOf beecore:Bee ;
+  rdfs:label "Drone" ;
+  skos:altLabel "drone bee" ;
+  skos:altLabel "male bee" .
+
+beecore:Hive a owl:Class ;
+  rdfs:label "Hive" ;
+  skos:altLabel "bee hive" .
+
+beecore:HiveType a owl:Class ;
+  rdfs:subClassOf beecore:Hive ;
+  rdfs:label "Hive type" .
+
+beecore:LangstrothHive a owl:Class ;
+  rdfs:subClassOf beecore:HiveType ;
+  rdfs:label "Langstroth hive" .
+
+beecore:MovableFrameHive a owl:Class ;
+  rdfs:subClassOf beecore:HiveType ;
+  rdfs:label "Movable-frame hive" ;
+  skos:altLabel "movable frame hive" .
+
+beecore:Skep a owl:Class ;
+  rdfs:subClassOf beecore:HiveType ;
+  rdfs:label "Skep" ;
+  skos:altLabel "straw skep" .
+
+beecore:TopBarHive a owl:Class ;
+  rdfs:subClassOf beecore:HiveType ;
+  rdfs:label "Top-bar hive" ;
+  skos:altLabel "top bar hive" .
+
+beecore:HiveComponent a owl:Class ;
+  rdfs:label "Hive component" .
+
+beecore:BottomBoard a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Bottom board" ;
+  skos:altLabel "floor board" .
+
+beecore:EntranceReducer a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Entrance reducer" .
+
+beecore:InnerCover a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Inner cover" .
+
+beecore:OuterCover a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Outer cover" ;
+  skos:altLabel "roof" .
+
+beecore:Super a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Super" ;
+  skos:altLabel "honey super" .
+
+beecore:Frame a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Frame" .
+
+beecore:Foundation a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Foundation" ;
+  skos:altLabel "wax foundation" .
+
+beecore:Comb a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Comb" .
+
+beecore:CombCell a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Comb cell" ;
+  skos:altLabel "cell" .
+
+beecore:QueenCell a owl:Class ;
+  rdfs:subClassOf beecore:CombCell ;
+  rdfs:label "Queen cell" ;
+  skos:altLabel "swarm cell" .
+
+beecore:QueenCup a owl:Class ;
+  rdfs:subClassOf beecore:CombCell ;
+  rdfs:label "Queen cup" ;
+  skos:altLabel "play cup" .
+
+beecore:WorkerCell a owl:Class ;
+  rdfs:subClassOf beecore:CombCell ;
+  rdfs:label "Worker cell" .
+
+beecore:DroneCell a owl:Class ;
+  rdfs:subClassOf beecore:CombCell ;
+  rdfs:label "Drone cell" .
+
+beecore:BroodNest a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Brood nest" .
+
+beecore:DroneComb a owl:Class ;
+  rdfs:subClassOf beecore:Comb ;
+  rdfs:label "Drone comb" .
+
+beecore:QueenExcluder a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Queen excluder" .
+
+beecore:Brood a owl:Class ;
+  rdfs:label "Brood" .
+
+beecore:Egg a owl:Class ;
+  rdfs:subClassOf beecore:Brood ;
+  rdfs:label "Egg" .
+
+beecore:Larva a owl:Class ;
+  rdfs:subClassOf beecore:Brood ;
+  rdfs:label "Larva" ;
+  skos:altLabel "larvae" .
+
+beecore:Pupa a owl:Class ;
+  rdfs:subClassOf beecore:Brood ;
+  rdfs:label "Pupa" ;
+  skos:altLabel "pupae" .
+
+beecore:ForageResource a owl:Class ;
+  rdfs:label "Forage resource" ;
+  skos:altLabel "bee forage" .
+
+beecore:FloralSource a owl:Class ;
+  rdfs:subClassOf beecore:ForageResource ;
+  rdfs:label "Floral source" ;
+  skos:altLabel "honey plant" ;
+  skos:altLabel "nectar source" .
+
+beecore:Nectar a owl:Class ;
+  rdfs:subClassOf beecore:ForageResource ;
+  rdfs:label "Nectar" .
+
+beecore:Pollen a owl:Class ;
+  rdfs:subClassOf beecore:ForageResource ;
+  rdfs:label "Pollen" .
+
+beecore:Water a owl:Class ;
+  rdfs:subClassOf beecore:ForageResource ;
+  rdfs:label "Water" .
+
+beecore:PropolisResin a owl:Class ;
+  rdfs:subClassOf beecore:ForageResource ;
+  rdfs:label "Propolis resin" ;
+  skos:altLabel "resin" .
+
+beecore:SupplementalFeed a owl:Class ;
+  rdfs:subClassOf beecore:ForageResource ;
+  rdfs:label "Supplemental feed" ;
+  skos:altLabel "artificial feed" .
+
+beecore:SugarSyrup a owl:Class ;
+  rdfs:subClassOf beecore:SupplementalFeed ;
+  rdfs:label "Sugar syrup" ;
+  skos:altLabel "syrup feed" .
+
+beecore:CandyFeed a owl:Class ;
+  rdfs:subClassOf beecore:SupplementalFeed ;
+  rdfs:label "Candy feed" ;
+  skos:altLabel "candy" ;
+  skos:altLabel "winter candy" .
+
+beecore:HiveProduct a owl:Class ;
+  rdfs:label "Hive product" .
+
+beecore:Honey a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Honey" .
+
+beecore:CombHoney a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Comb honey" .
+
+beecore:CreamedHoney a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Creamed honey" .
+
+beecore:Wax a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Wax" ;
+  skos:altLabel "beeswax" .
+
+beecore:Propolis a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Propolis" .
+
+beecore:RoyalJelly a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Royal jelly" .
+
+beecore:BeeVenom a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Bee venom" ;
+  skos:altLabel "venom" .
+
+beecore:BeePollen a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Bee pollen" ;
+  skos:altLabel "collected pollen" .
+
+beecore:BeeBread a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Bee bread" .
+
+beecore:SectionHoney a owl:Class ;
+  rdfs:subClassOf beecore:HiveProduct ;
+  rdfs:label "Section honey" ;
+  skos:altLabel "section comb honey" .
+
+beecore:HealthCondition a owl:Class ;
+  rdfs:label "Health condition" .
+
+beecore:Disease a owl:Class ;
+  rdfs:subClassOf beecore:HealthCondition ;
+  rdfs:label "Disease" .
+
+beecore:Parasite a owl:Class ;
+  rdfs:subClassOf beecore:HealthCondition ;
+  rdfs:label "Parasite" .
+
+beecore:Predator a owl:Class ;
+  rdfs:subClassOf beecore:HealthCondition ;
+  rdfs:label "Predator" .
+
+beecore:VarroaMite a owl:Class ;
+  rdfs:subClassOf beecore:Parasite ;
+  rdfs:label "Varroa mite" .
+
+beecore:Nosema a owl:Class ;
+  rdfs:subClassOf beecore:Disease ;
+  rdfs:label "Nosema" .
+
+beecore:AmericanFoulbrood a owl:Class ;
+  rdfs:subClassOf beecore:Disease ;
+  rdfs:label "American foulbrood" ;
+  skos:altLabel "AFB" .
+
+beecore:EuropeanFoulbrood a owl:Class ;
+  rdfs:subClassOf beecore:Disease ;
+  rdfs:label "European foulbrood" ;
+  skos:altLabel "EFB" .
+
+beecore:WaxMoth a owl:Class ;
+  rdfs:subClassOf beecore:Predator ;
+  rdfs:label "Wax moth" .
+
+beecore:Symptom a owl:Class ;
+  rdfs:label "Symptom" .
+
+beecore:ManagementAction a owl:Class ;
+  rdfs:label "Management action" .
+
+beecore:Inspection a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Inspection" ;
+  skos:altLabel "hive inspection" .
+
+beecore:Feeding a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Feeding" .
+
+beecore:VentilationManagement a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Ventilation management" ;
+  skos:altLabel "ventilation" ;
+  skos:altLabel "hive ventilation" .
+
+beecore:SwarmControl a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Swarm control" .
+
+beecore:QueenRearing a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Queen rearing" .
+
+beecore:Treatment a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Treatment" .
+
+beecore:Requeening a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Requeening" ;
+  skos:altLabel "queen introduction" .
+
+beecore:Splitting a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Splitting" ;
+  skos:altLabel "divide colony" .
+
+beecore:Harvesting a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Harvesting" ;
+  skos:altLabel "honey harvest" .
+
+beecore:Wintering a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Wintering" ;
+  skos:altLabel "overwintering" .
+
+beecore:PreventingRobbing a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Preventing robbing" ;
+  skos:altLabel "robbing prevention" .
+
+beecore:InstallingPackage a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Installing package" ;
+  skos:altLabel "package installation" .
+
+beecore:UnitingColonies a owl:Class ;
+  rdfs:subClassOf beecore:ManagementAction ;
+  rdfs:label "Uniting colonies" ;
+  skos:altLabel "combining colonies" .
+
+beecore:Equipment a owl:Class ;
+  rdfs:label "Equipment" .
+
+beecore:ProtectiveGear a owl:Class ;
+  rdfs:subClassOf beecore:Equipment ;
+  rdfs:label "Protective gear" ;
+  skos:altLabel "protective clothing" .
+
+beecore:Tool a owl:Class ;
+  rdfs:subClassOf beecore:Equipment ;
+  rdfs:label "Tool" .
+
+beecore:Feeder a owl:Class ;
+  rdfs:subClassOf beecore:Equipment ;
+  rdfs:label "Feeder" ;
+  skos:altLabel "division board feeder" ;
+  skos:altLabel "boardman feeder" ;
+  skos:altLabel "bottle feeder" .
+
+beecore:Smoker a owl:Class ;
+  rdfs:subClassOf beecore:Tool ;
+  rdfs:label "Smoker" .
+
+beecore:HiveTool a owl:Class ;
+  rdfs:subClassOf beecore:Tool ;
+  rdfs:label "Hive tool" ;
+  skos:altLabel "bee tool" .
+
+beecore:Extractor a owl:Class ;
+  rdfs:subClassOf beecore:Equipment ;
+  rdfs:label "Extractor" ;
+  skos:altLabel "honey extractor" .
+
+beecore:BeeEscape a owl:Class ;
+  rdfs:subClassOf beecore:Equipment ;
+  rdfs:label "Bee escape" ;
+  skos:altLabel "escape board" .
+
+beecore:Veil a owl:Class ;
+  rdfs:subClassOf beecore:ProtectiveGear ;
+  rdfs:label "Veil" ;
+  skos:altLabel "bee veil" .
+
+beecore:Gloves a owl:Class ;
+  rdfs:subClassOf beecore:ProtectiveGear ;
+  rdfs:label "Gloves" .
+
+beecore:QueenCage a owl:Class ;
+  rdfs:subClassOf beecore:Equipment ;
+  rdfs:label "Queen cage" .
+
+beecore:SectionBox a owl:Class ;
+  rdfs:subClassOf beecore:HiveComponent ;
+  rdfs:label "Section box" ;
+  skos:altLabel "section crate" .
+
+beecore:HoneyHouse a owl:Class ;
+  rdfs:subClassOf beecore:ApiarySite ;
+  rdfs:label "Honey house" ;
+  skos:altLabel "extracting room" .
+
+beecore:BeeSpace a owl:Class ;
+  rdfs:label "Bee space" .
+
+beecore:Season a owl:Class ;
+  rdfs:label "Season" .
+
+beecore:Spring a owl:Class ;
+  rdfs:subClassOf beecore:Season ;
+  rdfs:label "Spring" .
+
+beecore:Summer a owl:Class ;
+  rdfs:subClassOf beecore:Season ;
+  rdfs:label "Summer" .
+
+beecore:Autumn a owl:Class ;
+  rdfs:subClassOf beecore:Season ;
+  rdfs:label "Autumn" ;
+  skos:altLabel "Fall" .
+
+beecore:Winter a owl:Class ;
+  rdfs:subClassOf beecore:Season ;
+  rdfs:label "Winter" .
+
+##########
+# Properties
+##########
+
+beecore:hasColony a owl:ObjectProperty ;
+  rdfs:label "has colony" ;
+  rdfs:domain beecore:Apiary ;
+  rdfs:range beecore:Colony .
+
+beecore:locatedAt a owl:ObjectProperty ;
+  rdfs:label "located at" ;
+  rdfs:domain beecore:Apiary ;
+  rdfs:range beecore:ApiarySite .
+
+beecore:hasQueen a owl:ObjectProperty ;
+  rdfs:label "has queen" ;
+  rdfs:domain beecore:Colony ;
+  rdfs:range beecore:Queen .
+
+beecore:hasMember a owl:ObjectProperty ;
+  rdfs:label "has member" ;
+  rdfs:domain beecore:Colony ;
+  rdfs:range beecore:Bee .
+
+beecore:hasBrood a owl:ObjectProperty ;
+  rdfs:label "has brood" ;
+  rdfs:domain beecore:Colony ;
+  rdfs:range beecore:Brood .
+
+beecore:usesHive a owl:ObjectProperty ;
+  rdfs:label "uses hive" ;
+  rdfs:domain beecore:Colony ;
+  rdfs:range beecore:Hive .
+
+beecore:hasComponent a owl:ObjectProperty ;
+  rdfs:label "has component" ;
+  rdfs:domain beecore:Hive ;
+  rdfs:range beecore:HiveComponent .
+
+beecore:containsCellType a owl:ObjectProperty ;
+  rdfs:label "contains cell type" ;
+  rdfs:domain beecore:Comb ;
+  rdfs:range beecore:CombCell .
+
+beecore:containsProduct a owl:ObjectProperty ;
+  rdfs:label "contains product" ;
+  rdfs:domain beecore:Comb ;
+  rdfs:range beecore:HiveProduct .
+
+beecore:storesResource a owl:ObjectProperty ;
+  rdfs:label "stores resource" ;
+  rdfs:domain beecore:Comb ;
+  rdfs:range beecore:ForageResource .
+
+beecore:produces a owl:ObjectProperty ;
+  rdfs:label "produces" ;
+  rdfs:domain beecore:Colony ;
+  rdfs:range beecore:HiveProduct .
+
+beecore:occupiesBroodNest a owl:ObjectProperty ;
+  rdfs:label "occupies brood nest" ;
+  rdfs:domain beecore:Colony ;
+  rdfs:range beecore:BroodNest .
+
+beecore:collects a owl:ObjectProperty ;
+  rdfs:label "collects" ;
+  rdfs:domain beecore:Colony ;
+  rdfs:range beecore:ForageResource .
+
+beecore:foragesOn a owl:ObjectProperty ;
+  rdfs:label "forages on" ;
+  rdfs:domain beecore:Colony ;
+  rdfs:range beecore:FloralSource .
+
+beecore:affectedBy a owl:ObjectProperty ;
+  rdfs:label "affected by" ;
+  rdfs:domain beecore:Colony ;
+  rdfs:range beecore:HealthCondition .
+
+beecore:hasSymptom a owl:ObjectProperty ;
+  rdfs:label "has symptom" ;
+  rdfs:domain beecore:HealthCondition ;
+  rdfs:range beecore:Symptom .
+
+beecore:treatedBy a owl:ObjectProperty ;
+  rdfs:label "treated by" ;
+  rdfs:domain beecore:HealthCondition ;
+  rdfs:range beecore:Treatment .
+
+beecore:requiresEquipment a owl:ObjectProperty ;
+  rdfs:label "requires equipment" ;
+  rdfs:domain beecore:ManagementAction ;
+  rdfs:range beecore:Equipment .
+
+beecore:usesComponent a owl:ObjectProperty ;
+  rdfs:label "uses component" ;
+  rdfs:domain beecore:ManagementAction ;
+  rdfs:range beecore:HiveComponent .
+
+beecore:feedsWith a owl:ObjectProperty ;
+  rdfs:label "feeds with" ;
+  rdfs:domain beecore:Feeding ;
+  rdfs:range beecore:SupplementalFeed .
+
+beecore:performedDuring a owl:ObjectProperty ;
+  rdfs:label "performed during" ;
+  rdfs:domain beecore:ManagementAction ;
+  rdfs:range beecore:Season .
+
+beecore:maintainsBeeSpace a owl:ObjectProperty ;
+  rdfs:label "maintains bee space" ;
+  rdfs:domain beecore:ManagementAction ;
+  rdfs:range beecore:BeeSpace .
+
+beecore:targets a owl:ObjectProperty ;
+  rdfs:label "targets" ;
+  rdfs:domain beecore:ManagementAction ;
+  rdfs:range beecore:Colony .
+
+beecore:prevents a owl:ObjectProperty ;
+  rdfs:label "prevents" ;
+  rdfs:domain beecore:ManagementAction ;
+  rdfs:range beecore:Swarm .
+
+beecore:rears a owl:ObjectProperty ;
+  rdfs:label "rears" ;
+  rdfs:domain beecore:QueenRearing ;
+  rdfs:range beecore:Queen .
+
+beecore:hasQuantity a owl:DatatypeProperty ;
+  rdfs:label "has quantity" ;
+  rdfs:domain beecore:ManagementAction ;
+  rdfs:range xsd:decimal .
+
+beecore:hasUnit a owl:DatatypeProperty ;
+  rdfs:label "has unit" ;
+  rdfs:domain beecore:ManagementAction ;
+  rdfs:range xsd:string .

@@ -1,0 +1,246 @@
+{
+  "tenant_id": "eval-structure-4",
+  "top_k": 3,
+  "results": [
+    {
+      "id": "queen-mating",
+      "query": "How does the queen mate and what happens after mating?",
+      "expected_focus": "queen biology and reproduction",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0046:deef3433ebd5b156",
+          "distance": 0.911513,
+          "section_title": "That",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 19,
+          "page_end": 19,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large num"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0035:4686afb80005ee7d",
+          "distance": 0.9193244,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 15,
+          "page_end": 15,
+          "preview": "life, though- she often lives three or four Pig. 1\u2014The Queenbee years (30). On her return to the hive, after mating, if she has been fecundated, the male organs may be seen attached to her abdomen."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0034:582e81eb94ea85f9",
+          "distance": 0.93307894,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 15,
+          "page_end": 15,
+          "preview": "The Queen\n\n\u00a7 3. The mother-bee, as she is often called, is the only perfect female in the colony and is the true mother of it. Her only duty is to lay the eggs for the propogation of the species. She is a little larger than the worker but not so large as the drone. Her body is lo"
+        }
+      ]
+    },
+    {
+      "id": "varroa-monitoring",
+      "query": "What should a beekeeper watch when monitoring for varroa in a colony?",
+      "expected_focus": "disease, parasites, monitoring",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0221:3c78d77b238bdd9c",
+          "distance": 0.98129606,
+          "section_title": "Most",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 81,
+          "page_end": 81,
+          "preview": "Most\n\nbeekeepers have some method of keeping memoranda.\n\nThe Loss of the Queen.\n\n\u00a7 118. When the bees manifest a restless and uneasy disposition by running about the front of the hive and signaling each other, it is a sign that they have lost their queen, and they should be exami"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0223:2432dbb87291256d",
+          "distance": 1.0252873,
+          "section_title": "October",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 81,
+          "page_end": 81,
+          "preview": "October\n\nthis is a sure sign. Colonies that lose their queens during the winter have a forlorn appearance. The bees walk around the entrance listlessly and without eagerness; but few of them go in search of either honey or pollen.\n\n\u00a7 119. It is astonishing how quickly the bees di"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0408:fb67865b6447a069",
+          "distance": 1.0797999,
+          "section_title": "Beeswax",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 154,
+          "page_end": 154,
+          "preview": "Beeswax\n\nstand the winter in cold rooms where the temperature goes below\n\nzero. It is only when accidentally sustained in some corner of a\n\npopulous colony or in combs in a warm room that the moths can\n\nreproduce from one year to another.\n\n\u00a7 215. For a remedy there is but one rul"
+        }
+      ]
+    },
+    {
+      "id": "straw-skeps",
+      "query": "What are the advantages and limitations of straw skeps?",
+      "expected_focus": "hive equipment and management tradeoffs",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0127:9cfa786f6f2b233f",
+          "distance": 1.1789482,
+          "section_title": "They",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 51,
+          "page_end": 52,
+          "preview": "They\n\nare quite sufficient to protect the hives from the rays of the sun and also efficiently shelter the bees from rain. When elegant appearance\n\nIs desired, roofs with two slopes, cottage-fashion, are made.\n\n38"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0114:990524e975e617eb",
+          "distance": 1.1880609,
+          "section_title": "These",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 46,
+          "page_end": 46,
+          "preview": "These\n\nnot only supply pollen and honey in blooming time, but acceptable shade in hot summer days\n\n(86).\n\n\u00a7 65. Use sand, gravel or cinders under and around the hives, to prevent the springing up of grass to the annoyance of the bees. Sawdust is also used but is dangerous as it m"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0302:cf4b08a2883b28c9",
+          "distance": 1.2162292,
+          "section_title": "Comb-Honey",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 107,
+          "page_end": 107,
+          "preview": "Comb-Honey\n\n93\n\nbee-entrance guards for the same purpose. But all these contrivances are more or less In the way of the bees, and prevent easy ventilation in hot weather, and they should be avoided as much as possible.\n\nFig. 108\u2014\" Fancy\" Comb Honey."
+        }
+      ]
+    },
+    {
+      "id": "supers-management",
+      "query": "How should supers be supplied and managed in the hive?",
+      "expected_focus": "supers and honey management",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0303:0bd78b6870fe837c",
+          "distance": 0.8567656,
+          "section_title": "Large Honey Crops",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 107,
+          "page_end": 107,
+          "preview": "Large Honey Crops\n\n\u00a7 155. In very good honey-producing seasons and favorable loca-\n\ntions, a colony may fill several supers (Fig V 111), sometimes as many\n\nas tour or five. But it is well for the novice not to be too sanguine. As the super is filled, more may be added, either by "
+        },
+        {
+          "rank": 2,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0298:1446994051b4f5b6",
+          "distance": 0.8579316,
+          "section_title": "Suffice",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 105,
+          "page_end": 105,
+          "preview": "Suffice\n\nit to say\n\nthat every populous colony should be provided with one or more supers at the opening of the harv-\n\nFig. 105\u2014Section-Holder\n\nest. If we have any partly filled or partly built sections of the previous year, it Is well to use them\n\nas bait In the center of the su"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0297:325ddb2257d62ba5",
+          "distance": 0.8811084,
+          "section_title": "Putting On Supers",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 105,
+          "page_end": 105,
+          "preview": "Putting On Supers\n\n91\n\ncrop 'begins. This may be readily recognized 'by the whitening of the\n\ntop of the combs in the brood chamber, by the bees. In localities where the crop flow is sudden and large, it may not be advisable to wait till the combs are being whitened, for this is "
+        }
+      ]
+    },
+    {
+      "id": "pollen-use",
+      "query": "How do bees use pollen and why is it important to the colony?",
+      "expected_focus": "pollen function and colony needs",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0098:c8179d0c266f0428",
+          "distance": 0.7963707,
+          "section_title": "55. Pollen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 38,
+          "page_end": 38,
+          "preview": "55. Pollen\n\nis the fertilizing dust of flowers. We have said,\n\nin the Preface, that the visits of insects are needed for the fertiliza-\n\ntion of the flowers. On the other hand, the pollen which the bee gathers and helps to spread upon the pistil, to fructify the seed, is needed i"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0102:34fd6481ce6f5afc",
+          "distance": 0.93617916,
+          "section_title": "i WATER",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 39,
+          "page_end": 39,
+          "preview": "i WATER\n\n25\n\n\u00a7 57. Pollen is stored in the worker-cells of the brood combs, closely surrounding the brood. It Is rarely found in the supers (90) or storing apartment. Its presence there lessens the value of comb honey for table use.\n\n\u00a7 58. Let it be remembered by the horticulturi"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0099:c59b4c9cebf8edc6",
+          "distance": 0.9528972,
+          "section_title": "German",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 38,
+          "page_end": 38,
+          "preview": "German\n\nscientists, have interestingly described the \" stomach-mouth\" which appears to sort out or sift the pollen grains contained in the honey brought to the hive in the honey sack (23); for much\n\nof the honey harvested by them contains small pellets of pollen floating in it. D"
+        }
+      ]
+    },
+    {
+      "id": "winter-preparation",
+      "query": "How should colonies be prepared for winter or poor forage periods?",
+      "expected_focus": "seasonal management and feeding",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0359:a1db3e4d4a943dce",
+          "distance": 0.878877,
+          "section_title": "Spring Feeding",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 130,
+          "page_end": 130,
+          "preview": "Spring Feeding\n\n\u00a7 187. Spring feeding is advisable to stimulate breeding, for we must remember that the colonies spend a great deal of honey to\n\nrear brood in preparation for the harvest. If the colony be well\n\nsupplied at the end of winter, the queen will fill the cells with egg"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0334:3db63a525b4dca1a",
+          "distance": 0.91120094,
+          "section_title": "Make",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 121,
+          "page_end": 121,
+          "preview": "Make\n\ncertain, before winter has come, that the colonies are all\n\nprovided with at least 25 to 30 pounds of good stores, for this es-\n\nsential, which we have placed as sixth, should really be considered"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "162ccfc9-9b39-46ec-8ba9-c08934bc9633:c0369:98ea4d674c982c0e",
+          "distance": 0.93820673,
+          "section_title": "Helping Weak Colonies",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 133,
+          "page_end": 133,
+          "preview": "Helping Weak Colonies\n\n\u00a7 195. When in early spring you find colonies that are weak in numbers, from winter losses, they may readily be helped (if not\n\nworthless and if they have a good queen) by giving them a comb of\n\nbrood from a stronger colony, after all danger of the brood be"
+        }
+      ]
+    }
+  ]
+}

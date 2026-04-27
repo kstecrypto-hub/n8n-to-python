@@ -1,0 +1,4508 @@
+{
+  "queries_file": "/app/data/evaluation/retrieval_small_queries.json",
+  "tenant_id": "retrieval-eval-20260324",
+  "top_k": 5,
+  "summary": {
+    "queries": 4,
+    "passed": 4,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "asset_queries": 1,
+    "asset_queries_passed": 1
+  },
+  "results": [
+    {
+      "id": "queen-mating-dadant",
+      "query": "How does the queen mate and what happens after mating?",
+      "tenant_id": "retrieval-eval-20260324",
+      "top_k": 5,
+      "question_type": "explanation",
+      "retrieval_mode": "neighbor_expansion",
+      "expected_document_filenames": [
+        "DadantFirstLessonsInBeekeeping.pdf"
+      ],
+      "scope_document_filenames": [],
+      "expected_focus": "",
+      "selected_document_ids": [
+        "21b905f8-5390-4d73-a771-9ca876e50f05"
+      ],
+      "selected_document_filenames": [
+        "DadantFirstLessonsInBeekeeping.pdf"
+      ],
+      "expected_document_hits": [
+        "DadantFirstLessonsInBeekeeping.pdf"
+      ],
+      "expected_terms": [
+        "queen",
+        "mating",
+        "impregnated",
+        "spermatheca"
+      ],
+      "term_hits": [
+        "queen",
+        "mating",
+        "impregnated",
+        "spermatheca"
+      ],
+      "term_coverage": 1.0,
+      "row_term_coverage": 0.75,
+      "focus_phrase_hit": false,
+      "row_focus_hit": false,
+      "min_term_coverage": 0.5,
+      "expect_assets": false,
+      "expected_asset_terms": [
+        "queen",
+        "mating",
+        "impregnated",
+        "spermatheca"
+      ],
+      "asset_expectation_met": true,
+      "asset_term_hits": [],
+      "asset_term_coverage": 0.0,
+      "asset_row_term_coverage": 0.0,
+      "asset_link_count": 0,
+      "asset_link_max_confidence": 0.0,
+      "min_asset_link_confidence": 0.68,
+      "forbidden_document_filenames": [],
+      "forbidden_document_hits": [],
+      "forbidden_terms": [],
+      "forbidden_term_hits": [],
+      "min_selected_chunks": 0,
+      "min_selected_assets": 0,
+      "max_selected_documents": 0,
+      "selected_chunk_count": 7,
+      "selected_asset_count": 0,
+      "selected_assertion_count": 9,
+      "selected_entity_count": 8,
+      "prompt_context": {
+        "question": "How does the queen mate and what happens after mating?",
+        "normalized_query": "How does the queen mate and what happens after mating?",
+        "question_type": "explanation",
+        "budgets": {
+          "prompt_chars": 32000,
+          "history_chars": 2800,
+          "chunk_chars": 14000,
+          "asset_chars": 3200,
+          "assertion_chars": 4000,
+          "entity_chars": 1800,
+          "evidence_chars": 4000
+        },
+        "counts": {
+          "history_messages": 0,
+          "chunks": 7,
+          "assets": 0,
+          "assertions": 9,
+          "entities": 8,
+          "evidence": 9
+        },
+        "trimmed": {
+          "history_messages": 0,
+          "chunks": 0,
+          "assets": 0,
+          "assertions": 0,
+          "entities": 0,
+          "evidence": 0
+        },
+        "estimated_chars": {
+          "history": 2,
+          "chunks": 6120,
+          "assets": 2,
+          "assertions": 2758,
+          "entities": 718,
+          "evidence": 2780,
+          "total_prompt": 14365
+        },
+        "final_ids": {
+          "chunk_ids": [
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0007:1aa63e91242556ca",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0004:19c56852c2a766f6",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a"
+          ],
+          "asset_ids": [],
+          "assertion_ids": [
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r1",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r2",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r3",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953:r1",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a:r3",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r2",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r3",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r4",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r1"
+          ],
+          "entity_ids": [
+            "apiary_apiary",
+            "colony_colony",
+            "colony_swarm_colony",
+            "drone_drone",
+            "hive_hive",
+            "hivecomponent_super_hive_component",
+            "queen_queen",
+            "worker_worker"
+          ]
+        }
+      },
+      "passed": true,
+      "chunks": [
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 18,
+          "page_end": 18,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "THE QUEEN\n\n\u00a7 5. If for some reason the queen is unable to mate within the\n\nfirst three weeks of her life, she loses the desire to mate, but is nevertheless able to lay eggs that will hatch, as will be shown further (9).\n\nThese\n\nproduce only drones. In about two days after mating, she commences to lay, and she is cap-\n\n"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 17,
+          "page_end": 17,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "The Queen\n\n\u00a7 3. The mother-bee, as she is often called, is the only perfect female in the colony and is the true mother of it. Her only duty is to lay the eggs for the propogation of the species. She is a little larger than the worker but not so large as the drone. Her body is longer than that of the worker, but her wi"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 17,
+          "page_end": 17,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "life, though- she often lives three or four Pig. 1\u2014The Queenbee years (30). On her return to the hive, after mating, if she has been fecundated, the male organs may be seen attached to her abdomen."
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 21,
+          "page_end": 21,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large numbers for reproduc-\n\ntion.\n\n\u00a7 13. It is s"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0007:1aa63e91242556ca",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 20,
+          "page_end": 20,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Egg Laying\n\nA globular sac will be noted, attached to the main oviduct by a\n\nshort, tubular stem. A French naturalist, M. Audouin, first discovered the true character of this sac as the spermatheca, which contains the\n\nmale semen; and Prof. Leuckart computes its size as sufficient to con-\n\ntain, probably, twenty-five m"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0004:19c56852c2a766f6",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 19,
+          "page_end": 19,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Ovaries\n\nlimited space often causes the queen to desert the breeding apartment and induce swarming.\n\n\u00a7 6. Instinct teaches the workers the necessity of having a queen that is prolific, and should she become barren from any cause, or be lost or even decrease in her fer-\n\ntility (101-5) during the breeding season, or die"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 17,
+          "page_end": 17,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Natural History of the Honey-Bee\n\nThe Races of Bees\n\n-\n\n\u00a7 1. Of the different races of the honeybee, the common or black bee is the most numerous, though it is less desirable than the Italian, which was known to the ancients several hundred years before the Christian Era, and is mentioned by Aristotle and Virgil.\n\nThe "
+        }
+      ],
+      "assets": [],
+      "sources": [
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a",
+          "rank": 1,
+          "score": 0.181501,
+          "selected": true,
+          "payload": {
+            "distance": 0.81849897,
+            "metadata": {
+              "document_class": "book",
+              "parser_version": "v1",
+              "validation_status": "accepted",
+              "chunker_version": "v1",
+              "canonical_terms": "the_queen,if,these,in,fig,head",
+              "page_start": 18,
+              "chunk_index": 3,
+              "page_end": 18,
+              "surface_terms": "The Queen,If,These,In,Fig,Head",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037",
+              "chunk_role": "body",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0004:19c56852c2a766f6",
+              "quality_score": 1.0,
+              "language": "en",
+              "hierarchy_path": "The Queen",
+              "section_heading": "The Queen",
+              "token_count": 138,
+              "tenant_id": "retrieval-eval-20260324",
+              "section": "The Queen",
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:1733:2491",
+              "section_title": "The Queen",
+              "quality_flags": "ok",
+              "ontology_classes": "Bee,Drone,Egg,Hive,Honey,Queen,Worker",
+              "content_type": "text",
+              "title": "The Egypt"
+            },
+            "rerank_score": 0.379501
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "rank": 2,
+          "score": 0.066773,
+          "selected": true,
+          "payload": {
+            "distance": 0.9332274,
+            "metadata": {
+              "chunker_version": "v1",
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:791:1520",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "surface_terms": "The Queen,The,Her,She",
+              "chunk_role": "body",
+              "validation_status": "accepted",
+              "document_class": "book",
+              "hierarchy_path": "The Queen",
+              "chunk_index": 1,
+              "quality_flags": "ok",
+              "section_heading": "The Queen",
+              "title": "The Egypt",
+              "canonical_terms": "the_queen,the,her,she",
+              "language": "en",
+              "page_end": 17,
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+              "content_type": "text",
+              "page_start": 17,
+              "token_count": 143,
+              "ontology_classes": "Bee,Colony,Drone,Egg,Hive,Queen,Worker",
+              "quality_score": 1.0,
+              "section_title": "The Queen",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037",
+              "section": "The Queen",
+              "tenant_id": "retrieval-eval-20260324",
+              "parser_version": "v1"
+            },
+            "rerank_score": 0.239773
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037",
+          "rank": 3,
+          "score": 0.080823,
+          "selected": true,
+          "payload": {
+            "distance": 0.919177,
+            "metadata": {
+              "quality_flags": "ok",
+              "chunk_role": "body",
+              "validation_status": "accepted",
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:1522:1719",
+              "ontology_classes": "Bee,Hive,Queen",
+              "quality_score": 1.0,
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+              "parser_version": "v1",
+              "chunk_index": 2,
+              "language": "en",
+              "chunker_version": "v1",
+              "canonical_terms": "the_queen,pig,the_queenbee,on",
+              "token_count": 37,
+              "section_heading": "The Queen",
+              "section": "The Queen",
+              "surface_terms": "The Queen,Pig,The Queenbee,On",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "section_title": "The Queen",
+              "content_type": "text",
+              "page_start": 17,
+              "page_end": 17,
+              "title": "The Egypt",
+              "hierarchy_path": "The Queen",
+              "tenant_id": "retrieval-eval-20260324",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a",
+              "document_class": "book"
+            },
+            "rerank_score": 0.228823
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+          "rank": 4,
+          "score": 0.088852,
+          "selected": true,
+          "payload": {
+            "distance": 0.9111479,
+            "metadata": {
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:7390:7917",
+              "chunker_version": "v1",
+              "language": "en",
+              "token_count": 90,
+              "document_class": "book",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0012:9e336155b83aa814",
+              "validation_status": "accepted",
+              "section_title": "That",
+              "canonical_terms": "egg_laying,that,in,it,but,pig",
+              "page_end": 21,
+              "tenant_id": "retrieval-eval-20260324",
+              "parser_version": "v1",
+              "surface_terms": "Egg Laying,That,In,It,But,Pig",
+              "chunk_role": "body",
+              "ontology_classes": "Apiary,Colony,Drone,Queen",
+              "section_heading": "That",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0014:dac6f54341a39217",
+              "hierarchy_path": "Egg Laying / That",
+              "page_start": 21,
+              "quality_score": 1.0,
+              "section": "Egg Laying / That",
+              "title": "The Egypt",
+              "quality_flags": "ok",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "content_type": "text",
+              "chunk_index": 13
+            },
+            "rerank_score": 0.216852
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0007:1aa63e91242556ca",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0007:1aa63e91242556ca",
+          "rank": 5,
+          "score": 0.052648,
+          "selected": true,
+          "payload": {
+            "distance": 0.94735223,
+            "metadata": {
+              "token_count": 153,
+              "section_title": "Egg Laying",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0006:ad01434a8698128d",
+              "content_type": "text",
+              "parser_version": "v1",
+              "page_start": 20,
+              "validation_status": "accepted",
+              "chunk_role": "body",
+              "chunker_version": "v1",
+              "document_class": "book",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "canonical_terms": "egg_laying,french,audouin,prof,leuckart,it",
+              "chunk_index": 7,
+              "quality_score": 1.0,
+              "page_end": 20,
+              "section": "Egg Laying",
+              "tenant_id": "retrieval-eval-20260324",
+              "section_heading": "Egg Laying",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0008:408e80e8c52f8ffb",
+              "language": "en",
+              "surface_terms": "Egg Laying,French,Audouin,Prof,Leuckart,It",
+              "ontology_classes": "Drone,Egg,Queen,Worker,produces",
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:4550:5446",
+              "quality_flags": "ok",
+              "hierarchy_path": "Egg Laying",
+              "title": "The Egypt"
+            },
+            "rerank_score": 0.155648
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0005:a23714d55dd3cb93",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0005:a23714d55dd3cb93",
+          "rank": 6,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.1089584,
+            "metadata": {
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0004:19c56852c2a766f6",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0006:ad01434a8698128d",
+              "hierarchy_path": "Ovaries / This",
+              "validation_status": "accepted",
+              "section_heading": "This",
+              "title": "The Egypt",
+              "quality_score": 1.0,
+              "quality_flags": "ok",
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:2924:3809",
+              "page_start": 19,
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "section_title": "This",
+              "content_type": "text",
+              "tenant_id": "retrieval-eval-20260324",
+              "surface_terms": "Ovaries,This,Pig,The,Queen",
+              "token_count": 164,
+              "chunker_version": "v1",
+              "parser_version": "v1",
+              "language": "en",
+              "ontology_classes": "Bee,Egg,Feeding,Larva,Queen,RoyalJelly,Worker",
+              "chunk_index": 5,
+              "canonical_terms": "ovaries,this,pig,the,queen",
+              "page_end": 19,
+              "chunk_role": "body",
+              "section": "Ovaries / This",
+              "document_class": "book"
+            },
+            "rerank_score": 0.103
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0006:ad01434a8698128d",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0006:ad01434a8698128d",
+          "rank": 7,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.0954658,
+            "metadata": {
+              "ontology_classes": "Egg,Queen",
+              "surface_terms": "Ovaries,This,The,Fig,These",
+              "title": "The Egypt",
+              "chunk_role": "body",
+              "chunker_version": "v1",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "section_heading": "This",
+              "canonical_terms": "ovaries,this,the,fig,these",
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:3811:4536",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0005:a23714d55dd3cb93",
+              "parser_version": "v1",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0007:1aa63e91242556ca",
+              "section": "Ovaries / This",
+              "section_title": "This",
+              "content_type": "text",
+              "hierarchy_path": "Ovaries / This",
+              "language": "en",
+              "chunk_index": 6,
+              "document_class": "book",
+              "quality_score": 1.0,
+              "validation_status": "accepted",
+              "tenant_id": "retrieval-eval-20260324",
+              "token_count": 135,
+              "page_end": 19,
+              "quality_flags": "ok",
+              "page_start": 19
+            },
+            "rerank_score": 0.103
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0008:408e80e8c52f8ffb",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0008:408e80e8c52f8ffb",
+          "rank": 8,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.0539949,
+            "metadata": {
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:5448:6169",
+              "page_start": 20,
+              "section": "Egg Laying",
+              "chunker_version": "v1",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0009:58cf95c504526a7d",
+              "content_type": "text",
+              "title": "The Egypt",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "surface_terms": "Egg Laying,The,This,Fig,Queencells,Insects",
+              "parser_version": "v1",
+              "tenant_id": "retrieval-eval-20260324",
+              "quality_score": 1.0,
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0007:1aa63e91242556ca",
+              "document_class": "book",
+              "validation_status": "accepted",
+              "canonical_terms": "egg_laying,the,this,fig,queencells,insects",
+              "section_title": "Egg Laying",
+              "section_heading": "Egg Laying",
+              "hierarchy_path": "Egg Laying",
+              "quality_flags": "ok",
+              "chunk_index": 8,
+              "chunk_role": "body",
+              "language": "en",
+              "token_count": 129,
+              "ontology_classes": "Bee,Drone,Egg,Queen",
+              "page_end": 20
+            },
+            "rerank_score": 0.103
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0004:19c56852c2a766f6",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0004:19c56852c2a766f6",
+          "rank": 9,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.0475503,
+            "metadata": {
+              "parser_version": "v1",
+              "section_title": "Ovaries",
+              "content_type": "text",
+              "chunker_version": "v1",
+              "hierarchy_path": "Ovaries",
+              "page_end": 19,
+              "quality_flags": "ok",
+              "title": "The Egypt",
+              "ontology_classes": "Queen,Worker",
+              "validation_status": "accepted",
+              "surface_terms": "Ovaries,Instinct",
+              "chunk_index": 4,
+              "tenant_id": "retrieval-eval-20260324",
+              "language": "en",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a",
+              "canonical_terms": "ovaries,instinct",
+              "document_class": "book",
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:2505:2922",
+              "page_start": 19,
+              "chunk_role": "body",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "token_count": 72,
+              "quality_score": 1.0,
+              "section_heading": "Ovaries",
+              "section": "Ovaries",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0005:a23714d55dd3cb93"
+            },
+            "rerank_score": 0.103
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0009:58cf95c504526a7d",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0009:58cf95c504526a7d",
+          "rank": 10,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.0150936,
+            "metadata": {
+              "canonical_terms": "egg_laying,the,february,october,when",
+              "quality_flags": "ok",
+              "chunk_role": "body",
+              "content_type": "text",
+              "language": "en",
+              "section_title": "Egg Laying",
+              "token_count": 35,
+              "parser_version": "v1",
+              "tenant_id": "retrieval-eval-20260324",
+              "chunk_index": 9,
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0010:a86faa14d2060dc4",
+              "chunker_version": "v1",
+              "document_class": "book",
+              "title": "The Egypt",
+              "section": "Egg Laying",
+              "validation_status": "accepted",
+              "page_end": 20,
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:6171:6370",
+              "surface_terms": "Egg Laying,The,February,October,When",
+              "section_heading": "Egg Laying",
+              "hierarchy_path": "Egg Laying",
+              "ontology_classes": "Bee,Honey,Pollen,Queen",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0008:408e80e8c52f8ffb",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "page_start": 20,
+              "quality_score": 1.0
+            },
+            "rerank_score": 0.103
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "rank": 1,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.4129828,
+            "metadata": {
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+              "page_number": 29,
+              "asset_type": "page_image",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0029/page-0029.png",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_index": 0,
+              "important_terms": "brood,larv\u00e6,workers,drones,pollen (55),honey (49),queencell (42),Fig. 19 Eggs in the Cells"
+            },
+            "rerank_score": 0.169
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0028:page_image:00:84b6894561abf08f",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0028:page_image:00:84b6894561abf08f",
+          "rank": 2,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.3517385,
+            "metadata": {
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0028/page-0028.png",
+              "page_number": 28,
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0028:page_image:00:84b6894561abf08f",
+              "important_terms": "royal jelly,white pap,queen larva,worker larvae,drone larvae,salivary glands (21),Cowan,Cheshire,Fig. 18\u2014Magnified Sting",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_type": "page_image",
+              "asset_index": 0
+            },
+            "rerank_score": 0.169
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0021:page_image:00:020c74637e0c9185",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0021:page_image:00:020c74637e0c9185",
+          "rank": 4,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.6215934,
+            "metadata": {
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0021/page-0021.png",
+              "asset_index": 0,
+              "asset_type": "page_image",
+              "important_terms": "",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0021:page_image:00:020c74637e0c9185",
+              "tenant_id": "retrieval-eval-20260324",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "page_number": 21
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0019:page_image:00:4d66b8f938e886f9",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0019:page_image:00:4d66b8f938e886f9",
+          "rank": 5,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.620715,
+            "metadata": {
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0019:page_image:00:4d66b8f938e886f9",
+              "asset_type": "page_image",
+              "asset_index": 0,
+              "page_number": 19,
+              "important_terms": "",
+              "tenant_id": "retrieval-eval-20260324",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0019/page-0019.png"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0027:page_image:00:dd4f420e340c8df5",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0027:page_image:00:dd4f420e340c8df5",
+          "rank": 6,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.6197182,
+            "metadata": {
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0027:page_image:00:dd4f420e340c8df5",
+              "asset_type": "page_image",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_index": 0,
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0027/page-0027.png",
+              "page_number": 27,
+              "tenant_id": "retrieval-eval-20260324",
+              "important_terms": ""
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0023:page_image:00:57a7f402e276d8fc",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0023:page_image:00:57a7f402e276d8fc",
+          "rank": 7,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.6173797,
+            "metadata": {
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0023:page_image:00:57a7f402e276d8fc",
+              "page_number": 23,
+              "asset_index": 0,
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_type": "page_image",
+              "important_terms": "",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0023/page-0023.png"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0020:page_image:00:d67a23e2bd8ec562",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0020:page_image:00:d67a23e2bd8ec562",
+          "rank": 8,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.6159908,
+            "metadata": {
+              "asset_index": 0,
+              "important_terms": "",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0020:page_image:00:d67a23e2bd8ec562",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_type": "page_image",
+              "page_number": 20,
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0020/page-0020.png"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0024:page_image:00:2995242128fc2c3e",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0024:page_image:00:2995242128fc2c3e",
+          "rank": 9,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.6158216,
+            "metadata": {
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0024:page_image:00:2995242128fc2c3e",
+              "important_terms": "",
+              "asset_type": "page_image",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0024/page-0024.png",
+              "asset_index": 0,
+              "page_number": 24,
+              "tenant_id": "retrieval-eval-20260324"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0026:page_image:00:72d78774a595e864",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0026:page_image:00:72d78774a595e864",
+          "rank": 10,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.6143746,
+            "metadata": {
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0026:page_image:00:72d78774a595e864",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0026/page-0026.png",
+              "asset_type": "page_image",
+              "tenant_id": "retrieval-eval-20260324",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "page_number": 26,
+              "asset_index": 0,
+              "important_terms": ""
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0025:page_image:00:bff02dd405e3ecf5",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0025:page_image:00:bff02dd405e3ecf5",
+          "rank": 11,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.6104603,
+            "metadata": {
+              "asset_type": "page_image",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0025:page_image:00:bff02dd405e3ecf5",
+              "asset_index": 0,
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0025/page-0025.png",
+              "tenant_id": "retrieval-eval-20260324",
+              "page_number": 25,
+              "important_terms": "",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0018:page_image:00:05f168e0384ff459",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0018:page_image:00:05f168e0384ff459",
+          "rank": 12,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.6055436,
+            "metadata": {
+              "asset_index": 0,
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0018/page-0018.png",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0018:page_image:00:05f168e0384ff459",
+              "asset_type": "page_image",
+              "important_terms": "",
+              "page_number": 18,
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r1",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r1",
+          "entity_id": null,
+          "rank": 1,
+          "score": 0.9,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r1",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+            "subject_entity_id": "colony_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "queen_queen",
+            "object_literal": null,
+            "confidence": "0.9000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:40.192773+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r2",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r2",
+          "entity_id": null,
+          "rank": 2,
+          "score": 0.9,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r2",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+            "subject_entity_id": "colony_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "worker_worker",
+            "object_literal": null,
+            "confidence": "0.9000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:40.192773+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r3",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r3",
+          "entity_id": null,
+          "rank": 3,
+          "score": 0.9,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r3",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+            "subject_entity_id": "colony_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "drone_drone",
+            "object_literal": null,
+            "confidence": "0.9000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:40.192773+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953:r1",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953:r1",
+          "entity_id": null,
+          "rank": 4,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953:r1",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+            "subject_entity_id": "apiary_apiary",
+            "predicate": "hasColony",
+            "object_entity_id": "colony_colony",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:54:09.339803+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a:r3",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a:r3",
+          "entity_id": null,
+          "rank": 5,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a:r3",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0003:9f7419d01854569a",
+            "subject_entity_id": "hive_hive",
+            "predicate": "hasComponent",
+            "object_entity_id": "hivecomponent_super_hive_component",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:52:20.615850+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r2",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r2",
+          "entity_id": null,
+          "rank": 6,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r2",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+            "subject_entity_id": "colony_swarm_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "queen_queen",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r3",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r3",
+          "entity_id": null,
+          "rank": 7,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r3",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+            "subject_entity_id": "colony_swarm_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "worker_worker",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r4",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r4",
+          "entity_id": null,
+          "rank": 8,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r4",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+            "subject_entity_id": "colony_swarm_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "drone_drone",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r1",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r1",
+          "entity_id": null,
+          "rank": 9,
+          "score": 0.7,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r1",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+            "subject_entity_id": "colony_swarm_colony",
+            "predicate": "usesHive",
+            "object_entity_id": "hive_hive",
+            "object_literal": null,
+            "confidence": "0.7000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "apiary_apiary",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "apiary_apiary",
+          "rank": 1,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "apiary_apiary",
+            "canonical_name": "Apiary",
+            "entity_type": "Apiary",
+            "source": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "created_at": "2026-03-25T10:54:09.339803+00:00",
+            "updated_at": "2026-03-25T10:54:09.339803+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "colony_colony",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "colony_colony",
+          "rank": 2,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "colony_colony",
+            "canonical_name": "Colony",
+            "entity_type": "Colony",
+            "source": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "created_at": "2026-03-25T10:51:40.192773+00:00",
+            "updated_at": "2026-03-25T10:55:55.997244+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "colony_swarm_colony",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "colony_swarm_colony",
+          "rank": 3,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "colony_swarm_colony",
+            "canonical_name": "Swarm Colony",
+            "entity_type": "Colony",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:50:44.125768+00:00",
+            "updated_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "drone_drone",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "drone_drone",
+          "rank": 4,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "drone_drone",
+            "canonical_name": "Drone",
+            "entity_type": "Drone",
+            "source": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "created_at": "2026-03-25T10:51:40.192773+00:00",
+            "updated_at": "2026-03-25T10:55:09.495845+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "hive_hive",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "hive_hive",
+          "rank": 5,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "hive_hive",
+            "canonical_name": "Hive",
+            "entity_type": "Hive",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:35:50.633169+00:00",
+            "updated_at": "2026-03-25T10:52:20.615850+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "hivecomponent_super_hive_component",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "hivecomponent_super_hive_component",
+          "rank": 6,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "hivecomponent_super_hive_component",
+            "canonical_name": "Super Hive Component",
+            "entity_type": "HiveComponent",
+            "source": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "created_at": "2026-03-25T10:52:20.615850+00:00",
+            "updated_at": "2026-03-25T10:52:20.615850+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "queen_queen",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "queen_queen",
+          "rank": 7,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "queen_queen",
+            "canonical_name": "Queen",
+            "entity_type": "Queen",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:35:43.116213+00:00",
+            "updated_at": "2026-03-25T10:55:09.495845+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "worker_worker",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "worker_worker",
+          "rank": 8,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "worker_worker",
+            "canonical_name": "Worker",
+            "entity_type": "Worker",
+            "source": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "created_at": "2026-03-25T10:51:40.192773+00:00",
+            "updated_at": "2026-03-25T10:55:09.495845+00:00"
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "rank": null,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 17,
+            "page_end": 17
+          }
+        }
+      ]
+    },
+    {
+      "id": "pollen-role-dadant",
+      "query": "How do bees use pollen and why is it important to the colony?",
+      "tenant_id": "retrieval-eval-20260324",
+      "top_k": 5,
+      "question_type": "explanation",
+      "retrieval_mode": "neighbor_expansion",
+      "expected_document_filenames": [
+        "DadantFirstLessonsInBeekeeping.pdf"
+      ],
+      "scope_document_filenames": [],
+      "expected_focus": "",
+      "selected_document_ids": [
+        "21b905f8-5390-4d73-a771-9ca876e50f05",
+        "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4"
+      ],
+      "selected_document_filenames": [
+        "DadantFirstLessonsInBeekeeping.pdf",
+        "cu31924066723143.pdf"
+      ],
+      "expected_document_hits": [
+        "DadantFirstLessonsInBeekeeping.pdf"
+      ],
+      "expected_terms": [
+        "pollen",
+        "colony",
+        "bees"
+      ],
+      "term_hits": [
+        "pollen",
+        "colony",
+        "bees"
+      ],
+      "term_coverage": 1.0,
+      "row_term_coverage": 0.667,
+      "focus_phrase_hit": false,
+      "row_focus_hit": false,
+      "min_term_coverage": 0.34,
+      "expect_assets": false,
+      "expected_asset_terms": [
+        "pollen",
+        "colony",
+        "bees"
+      ],
+      "asset_expectation_met": true,
+      "asset_term_hits": [
+        "pollen"
+      ],
+      "asset_term_coverage": 0.333,
+      "asset_row_term_coverage": 0.333,
+      "asset_link_count": 2,
+      "asset_link_max_confidence": 0.95,
+      "min_asset_link_confidence": 0.68,
+      "forbidden_document_filenames": [],
+      "forbidden_document_hits": [],
+      "forbidden_terms": [],
+      "forbidden_term_hits": [],
+      "min_selected_chunks": 0,
+      "min_selected_assets": 0,
+      "max_selected_documents": 0,
+      "selected_chunk_count": 10,
+      "selected_asset_count": 1,
+      "selected_assertion_count": 8,
+      "selected_entity_count": 7,
+      "prompt_context": {
+        "question": "How do bees use pollen and why is it important to the colony?",
+        "normalized_query": "How do bees use pollen and why is it important to the colony?",
+        "question_type": "explanation",
+        "budgets": {
+          "prompt_chars": 32000,
+          "history_chars": 2800,
+          "chunk_chars": 14000,
+          "asset_chars": 3200,
+          "assertion_chars": 4000,
+          "entity_chars": 1800,
+          "evidence_chars": 4000
+        },
+        "counts": {
+          "history_messages": 0,
+          "chunks": 10,
+          "assets": 1,
+          "assertions": 8,
+          "entities": 7,
+          "evidence": 8
+        },
+        "trimmed": {
+          "history_messages": 0,
+          "chunks": 0,
+          "assets": 0,
+          "assertions": 0,
+          "entities": 0,
+          "evidence": 0
+        },
+        "estimated_chars": {
+          "history": 2,
+          "chunks": 8477,
+          "assets": 1960,
+          "assertions": 2435,
+          "entities": 591,
+          "evidence": 2496,
+          "total_prompt": 18120
+        },
+        "final_ids": {
+          "chunk_ids": [
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0042:8cf27df1a0ce1a38",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0031:d625680ec7a37917",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0043:30740fcdd3d8d7b4",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0043:cf991118942d8b8f",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0041:2b30a652f9cf0f2f",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0012:9e336155b83aa814",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037"
+          ],
+          "asset_ids": [
+            "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786"
+          ],
+          "assertion_ids": [
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r1",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r2",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r3",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953:r1",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r4",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r2",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r3",
+            "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r1"
+          ],
+          "entity_ids": [
+            "apiary_apiary",
+            "colony_colony",
+            "colony_swarm_colony",
+            "drone_drone",
+            "hive_hive",
+            "queen_queen",
+            "worker_worker"
+          ]
+        }
+      },
+      "passed": true,
+      "chunks": [
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0042:8cf27df1a0ce1a38",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 28,
+          "page_end": 29,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Brood\n\n\u00a7 33. The royal jelly (7), or white pap, which is fed to the queen larva during the entire time of its existence, and to the worker and drone larvae during the first three or four days, is a whitish semitransparent fluid, said by Cheshire to be produced by the large sali-\n\nFig. 18\u2014Magnified Sting.\n\nvary glands ("
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 17,
+          "page_end": 17,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "The Queen\n\n\u00a7 3. The mother-bee, as she is often called, is the only perfect female in the colony and is the true mother of it. Her only duty is to lay the eggs for the propogation of the species. She is a little larger than the worker but not so large as the drone. Her body is longer than that of the worker, but her wi"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 21,
+          "page_end": 21,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large numbers for reproduc-\n\ntion.\n\n\u00a7 13. It is s"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0031:d625680ec7a37917",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 25,
+          "page_end": 25,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "This\n\nenables the bee, like the fly and many\n\nPig. 14\u2014Anterior Leg of\n\nother insects, to fasten itself and walk\n\nWorker (magnified.)\n\nwith ease upon any smooth surface, such\n\nas a pane of glass or a ceiling.\n\n\u00a7 26. The anterior legs (Fig. 14.) are provided with a notch and\n\nA, B. C. which is used by the insect to\n\na th"
+        },
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0043:30740fcdd3d8d7b4",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 58,
+          "page_end": 58,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "The industry and activity of Bees in their domestic labours afford an instructive and amusing spectacle. All are actively engaged; each attending, with all its power, to the business to be done. Some feed the young larva, others seal them over when full fed. A certain portion attend upon the Queen; then there are the c"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0043:cf991118942d8b8f",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 29,
+          "page_end": 29,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "ferent kinds of brood. The queencell (42) hangs from the edges of the comb, looking, when empty, like an acorn cup, and when sealed like a peanut. The worker-brood when sealed differs from sealed\n\nBrood\n\n13\n\nDuring the latter part of their life as larv\u00e6, both the workers and\n\nthe drones are fed with a coarser food, whi"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 17,
+          "page_end": 17,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Natural History of the Honey-Bee\n\nThe Races of Bees\n\n-\n\n\u00a7 1. Of the different races of the honeybee, the common or black bee is the most numerous, though it is less desirable than the Italian, which was known to the ancients several hundred years before the Christian Era, and is mentioned by Aristotle and Virgil.\n\nThe "
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0041:2b30a652f9cf0f2f",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 28,
+          "page_end": 28,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Magnified Sting\n\nvary glands (21) of the worker bees. On the other hand. Cowan and others claim that it is a chyle product of the stomach of the worker, regurgitated by them at will.\n\n12"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0012:9e336155b83aa814",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 21,
+          "page_end": 21,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Their\n\nonly use Is to serve the queen when on her\n\n\" bridal trip.\"\n\nNot more than one in a thousand is ever\n\nprivileged to perform that duty, but as the\n\nqueen's life is very valuable, and the dangers surrounding her flight are numerous, it is necessary to have a sufficient number of them, in order that her absence fro"
+        },
+        {
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_start": 17,
+          "page_end": 17,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "life, though- she often lives three or four Pig. 1\u2014The Queenbee years (30). On her return to the hive, after mating, if she has been fecundated, the male organs may be seen attached to her abdomen."
+        }
+      ],
+      "assets": [
+        {
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "page_number": 29,
+          "asset_type": "page_image",
+          "label": "",
+          "preview": ""
+        }
+      ],
+      "sources": [
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "rank": 1,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.2513025,
+            "metadata": {
+              "title": "The Egypt",
+              "parser_version": "v1",
+              "language": "en",
+              "chunk_role": "body",
+              "hierarchy_path": "The Queen",
+              "surface_terms": "The Queen,The,Her,She",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+              "page_end": 17,
+              "page_start": 17,
+              "section_title": "The Queen",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "token_count": 143,
+              "content_type": "text",
+              "quality_flags": "ok",
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:791:1520",
+              "section": "The Queen",
+              "chunker_version": "v1",
+              "section_heading": "The Queen",
+              "ontology_classes": "Bee,Colony,Drone,Egg,Hive,Queen,Worker",
+              "quality_score": 1.0,
+              "validation_status": "accepted",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037",
+              "chunk_index": 1,
+              "canonical_terms": "the_queen,the,her,she",
+              "tenant_id": "retrieval-eval-20260324",
+              "document_class": "book"
+            },
+            "rerank_score": 0.153333
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+          "rank": 2,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.2222419,
+            "metadata": {
+              "canonical_terms": "egg_laying,that,in,it,but,pig",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0012:9e336155b83aa814",
+              "quality_score": 1.0,
+              "page_end": 21,
+              "title": "The Egypt",
+              "language": "en",
+              "content_type": "text",
+              "chunk_index": 13,
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:7390:7917",
+              "validation_status": "accepted",
+              "parser_version": "v1",
+              "token_count": 90,
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "document_class": "book",
+              "section_title": "That",
+              "quality_flags": "ok",
+              "tenant_id": "retrieval-eval-20260324",
+              "surface_terms": "Egg Laying,That,In,It,But,Pig",
+              "hierarchy_path": "Egg Laying / That",
+              "ontology_classes": "Apiary,Colony,Drone,Queen",
+              "section": "Egg Laying / That",
+              "section_heading": "That",
+              "chunker_version": "v1",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0014:dac6f54341a39217",
+              "chunk_role": "body",
+              "page_start": 21
+            },
+            "rerank_score": 0.142222
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0042:8cf27df1a0ce1a38",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0042:8cf27df1a0ce1a38",
+          "rank": 3,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.1752005,
+            "metadata": {
+              "surface_terms": "Egg Laying,Brood,The,Cheshire,Fig,Magnified Sting,On",
+              "title": "The Egypt",
+              "chunker_version": "v1",
+              "page_end": 29,
+              "validation_status": "accepted",
+              "token_count": 142,
+              "hierarchy_path": "Egg Laying / Brood",
+              "section_heading": "Brood",
+              "document_class": "book",
+              "quality_score": 1.0,
+              "chunk_role": "body",
+              "section_title": "Brood",
+              "ontology_classes": "Bee,Brood,Drone,Egg,Honey,Larva,Pollen,Queen,RoyalJelly,Worker",
+              "chunk_index": 42,
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:19695:20478",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0043:cf991118942d8b8f",
+              "content_type": "text",
+              "language": "en",
+              "parser_version": "v1",
+              "tenant_id": "retrieval-eval-20260324",
+              "section": "Egg Laying / Brood",
+              "page_start": 28,
+              "canonical_terms": "egg_laying,brood,the,cheshire,fig,magnified_sting,on",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0041:2b30a652f9cf0f2f",
+              "quality_flags": "ok",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05"
+            },
+            "rerank_score": 0.142222
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0031:d625680ec7a37917",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0031:d625680ec7a37917",
+          "rank": 4,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.0113462,
+            "metadata": {
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0030:7d067e7b1b393c98",
+              "ontology_classes": "Bee,Drone,Pollen,Queen,Wax,Worker",
+              "quality_score": 1.0,
+              "quality_flags": "ok",
+              "language": "en",
+              "section_heading": "This",
+              "document_class": "book",
+              "section": "Egg Laying / This",
+              "page_start": 25,
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:14238:15176",
+              "chunk_index": 31,
+              "canonical_terms": "egg_laying,this,pig,anterior_leg,worker,the,fig",
+              "section_title": "This",
+              "surface_terms": "Egg Laying,This,Pig,Anterior Leg,Worker,The,Fig",
+              "parser_version": "v1",
+              "chunker_version": "v1",
+              "tenant_id": "retrieval-eval-20260324",
+              "validation_status": "accepted",
+              "chunk_role": "body",
+              "hierarchy_path": "Egg Laying / This",
+              "token_count": 177,
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "page_end": 25,
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0032:647f05d3915731b6",
+              "content_type": "text",
+              "title": "The Egypt"
+            },
+            "rerank_score": 0.142222
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0043:30740fcdd3d8d7b4",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0043:30740fcdd3d8d7b4",
+          "rank": 5,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.1790068,
+            "metadata": {
+              "prev_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0042:8f55359f8670dbc5",
+              "canonical_terms": "a_manual_of_bee_keeping,the,bees,all,some,queen,no",
+              "next_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0044:4c9bb5f9955a300a",
+              "section": "A Manual Of Bee-Keeping",
+              "tenant_id": "retrieval-eval-20260324",
+              "document_class": "book",
+              "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+              "title": "Bee-Keeping",
+              "parser_version": "v1",
+              "quality_flags": "ok",
+              "section_title": "A Manual Of Bee-Keeping",
+              "validation_status": "accepted",
+              "language": "en",
+              "content_type": "text",
+              "hierarchy_path": "A Manual Of Bee-Keeping",
+              "chunk_index": 43,
+              "token_count": 105,
+              "ontology_classes": "Bee,Hive,Honey,Larva,Pollen,Queen",
+              "provenance_ref": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:24859:25456",
+              "surface_terms": "A Manual Of Bee-Keeping,The,Bees,All,Some,Queen,No",
+              "quality_score": 1.0,
+              "chunk_role": "body",
+              "chunker_version": "v1",
+              "section_heading": "A Manual Of Bee-Keeping",
+              "page_start": 58,
+              "page_end": 58
+            },
+            "rerank_score": 0.126667
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0021:e87929f021c96a7c",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0021:e87929f021c96a7c",
+          "rank": 6,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.2530638,
+            "metadata": {
+              "ontology_classes": "Bee,Colony,Drone,Queen,Worker",
+              "content_type": "text",
+              "surface_terms": "Egg Laying,They,We,The,Fig",
+              "canonical_terms": "egg_laying,they,we,the,fig",
+              "parser_version": "v1",
+              "section_title": "They",
+              "quality_flags": "ok",
+              "language": "en",
+              "chunk_index": 21,
+              "quality_score": 1.0,
+              "chunk_role": "body",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0020:bc1521f4db965e47",
+              "title": "The Egypt",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0022:f53842cb6a280b22",
+              "tenant_id": "retrieval-eval-20260324",
+              "hierarchy_path": "Egg Laying / They",
+              "chunker_version": "v1",
+              "validation_status": "accepted",
+              "page_end": 23,
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:10258:10590",
+              "page_start": 23,
+              "section": "Egg Laying / They",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "section_heading": "They",
+              "document_class": "book",
+              "token_count": 61
+            },
+            "rerank_score": 0.114444
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0043:cf991118942d8b8f",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0043:cf991118942d8b8f",
+          "rank": 7,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.2342043,
+            "metadata": {
+              "chunk_index": 43,
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:20480:21221",
+              "chunker_version": "v1",
+              "parser_version": "v1",
+              "surface_terms": "Egg Laying,Brood,The,During,Fig",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0044:fed292a5d27dd5ed",
+              "token_count": 132,
+              "section_title": "Brood",
+              "tenant_id": "retrieval-eval-20260324",
+              "section_heading": "Brood",
+              "ontology_classes": "Brood,Comb,Drone,Egg,Honey,Pollen,Queen,Worker",
+              "section": "Egg Laying / Brood",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "content_type": "text",
+              "title": "The Egypt",
+              "page_end": 29,
+              "canonical_terms": "egg_laying,brood,the,during,fig",
+              "page_start": 29,
+              "document_class": "book",
+              "quality_flags": "ok",
+              "chunk_role": "body",
+              "language": "en",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0042:8cf27df1a0ce1a38",
+              "quality_score": 1.0,
+              "hierarchy_path": "Egg Laying / Brood",
+              "validation_status": "accepted"
+            },
+            "rerank_score": 0.114444
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0032:647f05d3915731b6",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0032:647f05d3915731b6",
+          "rank": 8,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.1606598,
+            "metadata": {
+              "validation_status": "accepted",
+              "page_start": 25,
+              "language": "en",
+              "content_type": "text",
+              "title": "The Egypt",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0033:392fed240ba696a9",
+              "document_class": "book",
+              "chunk_role": "body",
+              "quality_score": 1.0,
+              "page_end": 26,
+              "section_title": "This",
+              "quality_flags": "ok",
+              "section": "Egg Laying / This",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0031:d625680ec7a37917",
+              "hierarchy_path": "Egg Laying / This",
+              "canonical_terms": "egg_laying,this,fig,they,posterior_legs,worker,pollen",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "token_count": 31,
+              "section_heading": "This",
+              "chunker_version": "v1",
+              "tenant_id": "retrieval-eval-20260324",
+              "chunk_index": 32,
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:15178:2786",
+              "surface_terms": "Egg Laying,This,Fig,They,Posterior Legs,Worker,Pollen",
+              "parser_version": "v1",
+              "ontology_classes": "Pollen,Worker"
+            },
+            "rerank_score": 0.114444
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0040:8aa04e820408c45d",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0040:8aa04e820408c45d",
+          "rank": 9,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.271361,
+            "metadata": {
+              "document_class": "book",
+              "chunk_index": 40,
+              "quality_score": 1.0,
+              "validation_status": "accepted",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "surface_terms": "Egg Laying,Brood,There,These,The,In",
+              "token_count": 138,
+              "hierarchy_path": "Egg Laying / Brood",
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:18740:19504",
+              "section_title": "Brood",
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0039:595b00248feb4a2e",
+              "page_start": 27,
+              "section_heading": "Brood",
+              "quality_flags": "ok",
+              "page_end": 28,
+              "chunker_version": "v1",
+              "title": "The Egypt",
+              "ontology_classes": "Bee,Brood,Drone,Egg,Larva,Pupa,Queen,RoyalJelly,Worker",
+              "section": "Egg Laying / Brood",
+              "content_type": "text",
+              "parser_version": "v1",
+              "language": "en",
+              "chunk_role": "body",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0041:2b30a652f9cf0f2f",
+              "tenant_id": "retrieval-eval-20260324",
+              "canonical_terms": "egg_laying,brood,there,these,the,in"
+            },
+            "rerank_score": 0.098889
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0005:a23714d55dd3cb93",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0005:a23714d55dd3cb93",
+          "rank": 10,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.1763604,
+            "metadata": {
+              "content_type": "text",
+              "chunk_index": 5,
+              "section": "Ovaries / This",
+              "title": "The Egypt",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0006:ad01434a8698128d",
+              "tenant_id": "retrieval-eval-20260324",
+              "validation_status": "accepted",
+              "document_class": "book",
+              "page_end": 19,
+              "section_title": "This",
+              "chunk_role": "body",
+              "language": "en",
+              "hierarchy_path": "Ovaries / This",
+              "canonical_terms": "ovaries,this,pig,the,queen",
+              "chunker_version": "v1",
+              "ontology_classes": "Bee,Egg,Feeding,Larva,Queen,RoyalJelly,Worker",
+              "page_start": 19,
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0004:19c56852c2a766f6",
+              "surface_terms": "Ovaries,This,Pig,The,Queen",
+              "section_heading": "This",
+              "quality_flags": "ok",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "quality_score": 1.0,
+              "token_count": 164,
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:2924:3809",
+              "parser_version": "v1"
+            },
+            "rerank_score": 0.098889
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "rank": 1,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.2854028,
+            "metadata": {
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "page_number": 29,
+              "asset_type": "page_image",
+              "tenant_id": "retrieval-eval-20260324",
+              "important_terms": "brood,larv\u00e6,workers,drones,pollen (55),honey (49),queencell (42),Fig. 19 Eggs in the Cells",
+              "asset_index": 0,
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0029/page-0029.png"
+            },
+            "rerank_score": 0.194444
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0028:page_image:00:84b6894561abf08f",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0028:page_image:00:84b6894561abf08f",
+          "rank": 2,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.3028888,
+            "metadata": {
+              "asset_index": 0,
+              "asset_type": "page_image",
+              "page_number": 28,
+              "important_terms": "royal jelly,white pap,queen larva,worker larvae,drone larvae,salivary glands (21),Cowan,Cheshire,Fig. 18\u2014Magnified Sting",
+              "tenant_id": "retrieval-eval-20260324",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0028/page-0028.png",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0028:page_image:00:84b6894561abf08f"
+            },
+            "rerank_score": 0.163333
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0019:page_image:00:4d66b8f938e886f9",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0019:page_image:00:4d66b8f938e886f9",
+          "rank": 5,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5361294,
+            "metadata": {
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "page_number": 19,
+              "asset_type": "page_image",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_index": 0,
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0019/page-0019.png",
+              "important_terms": "",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0019:page_image:00:4d66b8f938e886f9"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0018:page_image:00:05f168e0384ff459",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0018:page_image:00:05f168e0384ff459",
+          "rank": 6,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.53512,
+            "metadata": {
+              "asset_type": "page_image",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0018:page_image:00:05f168e0384ff459",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "tenant_id": "retrieval-eval-20260324",
+              "page_number": 18,
+              "asset_index": 0,
+              "important_terms": "",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0018/page-0018.png"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0023:page_image:00:57a7f402e276d8fc",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0023:page_image:00:57a7f402e276d8fc",
+          "rank": 7,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5340939,
+            "metadata": {
+              "page_number": 23,
+              "important_terms": "",
+              "asset_index": 0,
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0023:page_image:00:57a7f402e276d8fc",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0023/page-0023.png",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_type": "page_image"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0020:page_image:00:d67a23e2bd8ec562",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0020:page_image:00:d67a23e2bd8ec562",
+          "rank": 8,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5334889,
+            "metadata": {
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0020/page-0020.png",
+              "asset_index": 0,
+              "important_terms": "",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0020:page_image:00:d67a23e2bd8ec562",
+              "page_number": 20,
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_type": "page_image"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0025:page_image:00:bff02dd405e3ecf5",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0025:page_image:00:bff02dd405e3ecf5",
+          "rank": 9,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5327863,
+            "metadata": {
+              "asset_type": "page_image",
+              "asset_index": 0,
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "important_terms": "",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0025:page_image:00:bff02dd405e3ecf5",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0025/page-0025.png",
+              "page_number": 25
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0017:page_image:00:dedc5cc569eb1a35",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0017:page_image:00:dedc5cc569eb1a35",
+          "rank": 10,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.532124,
+            "metadata": {
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0017:page_image:00:dedc5cc569eb1a35",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0017/page-0017.png",
+              "tenant_id": "retrieval-eval-20260324",
+              "page_number": 17,
+              "important_terms": "",
+              "asset_type": "page_image",
+              "asset_index": 0
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0024:page_image:00:2995242128fc2c3e",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0024:page_image:00:2995242128fc2c3e",
+          "rank": 11,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5246191,
+            "metadata": {
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0024/page-0024.png",
+              "important_terms": "",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_index": 0,
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "page_number": 24,
+              "asset_type": "page_image",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0024:page_image:00:2995242128fc2c3e"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0026:page_image:00:72d78774a595e864",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0026:page_image:00:72d78774a595e864",
+          "rank": 12,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5125687,
+            "metadata": {
+              "tenant_id": "retrieval-eval-20260324",
+              "important_terms": "",
+              "asset_type": "page_image",
+              "asset_index": 0,
+              "page_number": 26,
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0026:page_image:00:72d78774a595e864",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0026/page-0026.png"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_link",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "document_id": null,
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0042:8cf27df1a0ce1a38",
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "rank": null,
+          "score": 0.95,
+          "selected": true,
+          "payload": {
+            "link_id": "5a6fb1f8-0b60-4889-979b-546b230edf98",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0042:8cf27df1a0ce1a38",
+            "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+            "link_type": "text_overlap",
+            "confidence": "0.9500",
+            "metadata_json": {
+              "reason": "shared_visual_terms",
+              "asset_type": "page_image",
+              "page_number": 29,
+              "shared_terms": [
+                "appears",
+                "both",
+                "brood",
+                "cells",
+                "coarser",
+                "drones",
+                "during",
+                "eggs"
+              ],
+              "page_chunk_count": 3
+            },
+            "created_at": "2026-03-25T10:51:17.614819+00:00"
+          }
+        },
+        {
+          "source_kind": "asset_link",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "document_id": null,
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0043:cf991118942d8b8f",
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "rank": null,
+          "score": 0.95,
+          "selected": true,
+          "payload": {
+            "link_id": "7d2ee5ce-e0a8-482c-a52e-e7fe9c3460b8",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0043:cf991118942d8b8f",
+            "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+            "link_type": "text_overlap",
+            "confidence": "0.9500",
+            "metadata_json": {
+              "reason": "shared_visual_terms",
+              "asset_type": "page_image",
+              "page_number": 29,
+              "shared_terms": [
+                "acorn",
+                "appears",
+                "both",
+                "brood",
+                "cells",
+                "coarser",
+                "comb",
+                "differs"
+              ],
+              "page_chunk_count": 3
+            },
+            "created_at": "2026-03-25T10:51:17.614819+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r1",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r1",
+          "entity_id": null,
+          "rank": 1,
+          "score": 0.9,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r1",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+            "subject_entity_id": "colony_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "queen_queen",
+            "object_literal": null,
+            "confidence": "0.9000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:40.192773+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r2",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r2",
+          "entity_id": null,
+          "rank": 2,
+          "score": 0.9,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r2",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+            "subject_entity_id": "colony_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "worker_worker",
+            "object_literal": null,
+            "confidence": "0.9000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:40.192773+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r3",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r3",
+          "entity_id": null,
+          "rank": 3,
+          "score": 0.9,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a:r3",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+            "subject_entity_id": "colony_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "drone_drone",
+            "object_literal": null,
+            "confidence": "0.9000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:40.192773+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953:r1",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953:r1",
+          "entity_id": null,
+          "rank": 4,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953:r1",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0013:8cf3247cb9ac5953",
+            "subject_entity_id": "apiary_apiary",
+            "predicate": "hasColony",
+            "object_entity_id": "colony_colony",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:54:09.339803+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r4",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r4",
+          "entity_id": null,
+          "rank": 5,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r4",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+            "subject_entity_id": "colony_swarm_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "drone_drone",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r2",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r2",
+          "entity_id": null,
+          "rank": 6,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r2",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+            "subject_entity_id": "colony_swarm_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "queen_queen",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r3",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r3",
+          "entity_id": null,
+          "rank": 7,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r3",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+            "subject_entity_id": "colony_swarm_colony",
+            "predicate": "hasMember",
+            "object_entity_id": "worker_worker",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r1",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+          "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r1",
+          "entity_id": null,
+          "rank": 8,
+          "score": 0.7,
+          "selected": true,
+          "payload": {
+            "assertion_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc:r1",
+            "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0001:badaea527e47e0dc",
+            "subject_entity_id": "colony_swarm_colony",
+            "predicate": "usesHive",
+            "object_entity_id": "hive_hive",
+            "object_literal": null,
+            "confidence": "0.7000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "apiary_apiary",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "apiary_apiary",
+          "rank": 1,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "apiary_apiary",
+            "canonical_name": "Apiary",
+            "entity_type": "Apiary",
+            "source": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "created_at": "2026-03-25T10:54:09.339803+00:00",
+            "updated_at": "2026-03-25T10:54:09.339803+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "colony_colony",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "colony_colony",
+          "rank": 2,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "colony_colony",
+            "canonical_name": "Colony",
+            "entity_type": "Colony",
+            "source": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "created_at": "2026-03-25T10:51:40.192773+00:00",
+            "updated_at": "2026-03-25T10:55:55.997244+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "colony_swarm_colony",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "colony_swarm_colony",
+          "rank": 3,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "colony_swarm_colony",
+            "canonical_name": "Swarm Colony",
+            "entity_type": "Colony",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:50:44.125768+00:00",
+            "updated_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "drone_drone",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "drone_drone",
+          "rank": 4,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "drone_drone",
+            "canonical_name": "Drone",
+            "entity_type": "Drone",
+            "source": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "created_at": "2026-03-25T10:51:40.192773+00:00",
+            "updated_at": "2026-03-25T10:55:09.495845+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "hive_hive",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "hive_hive",
+          "rank": 5,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "hive_hive",
+            "canonical_name": "Hive",
+            "entity_type": "Hive",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:35:50.633169+00:00",
+            "updated_at": "2026-03-25T10:52:20.615850+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "queen_queen",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "queen_queen",
+          "rank": 6,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "queen_queen",
+            "canonical_name": "Queen",
+            "entity_type": "Queen",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:35:43.116213+00:00",
+            "updated_at": "2026-03-25T10:55:09.495845+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "worker_worker",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "worker_worker",
+          "rank": 7,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "worker_worker",
+            "canonical_name": "Worker",
+            "entity_type": "Worker",
+            "source": "21b905f8-5390-4d73-a771-9ca876e50f05",
+            "created_at": "2026-03-25T10:51:40.192773+00:00",
+            "updated_at": "2026-03-25T10:55:09.495845+00:00"
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0000:147198fd7636301a",
+          "rank": null,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 17,
+            "page_end": 17
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0041:2b30a652f9cf0f2f",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0041:2b30a652f9cf0f2f",
+          "rank": null,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 28,
+            "page_end": 28
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0012:9e336155b83aa814",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0012:9e336155b83aa814",
+          "rank": null,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 21,
+            "page_end": 21
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0002:1f140368e2b1b037",
+          "rank": null,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 17,
+            "page_end": 17
+          }
+        }
+      ]
+    },
+    {
+      "id": "straw-skeps-cu319",
+      "query": "What are the advantages and limitations of straw skeps?",
+      "tenant_id": "retrieval-eval-20260324",
+      "top_k": 5,
+      "question_type": "explanation",
+      "retrieval_mode": "neighbor_expansion",
+      "expected_document_filenames": [
+        "cu31924066723143.pdf"
+      ],
+      "scope_document_filenames": [],
+      "expected_focus": "",
+      "selected_document_ids": [
+        "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4"
+      ],
+      "selected_document_filenames": [
+        "cu31924066723143.pdf"
+      ],
+      "expected_document_hits": [
+        "cu31924066723143.pdf"
+      ],
+      "expected_terms": [
+        "straw",
+        "skep",
+        "hive"
+      ],
+      "term_hits": [
+        "straw",
+        "skep",
+        "hive"
+      ],
+      "term_coverage": 1.0,
+      "row_term_coverage": 1.0,
+      "focus_phrase_hit": false,
+      "row_focus_hit": false,
+      "min_term_coverage": 0.34,
+      "expect_assets": false,
+      "expected_asset_terms": [
+        "straw",
+        "skep",
+        "hive"
+      ],
+      "asset_expectation_met": true,
+      "asset_term_hits": [],
+      "asset_term_coverage": 0.0,
+      "asset_row_term_coverage": 0.0,
+      "asset_link_count": 0,
+      "asset_link_max_confidence": 0.0,
+      "min_asset_link_confidence": 0.68,
+      "forbidden_document_filenames": [],
+      "forbidden_document_hits": [],
+      "forbidden_terms": [],
+      "forbidden_term_hits": [],
+      "min_selected_chunks": 0,
+      "min_selected_assets": 0,
+      "max_selected_documents": 0,
+      "selected_chunk_count": 10,
+      "selected_asset_count": 0,
+      "selected_assertion_count": 11,
+      "selected_entity_count": 13,
+      "prompt_context": {
+        "question": "What are the advantages and limitations of straw skeps?",
+        "normalized_query": "What are the advantages and limitations of straw skeps?",
+        "question_type": "explanation",
+        "budgets": {
+          "prompt_chars": 32000,
+          "history_chars": 2800,
+          "chunk_chars": 14000,
+          "asset_chars": 3200,
+          "assertion_chars": 4000,
+          "entity_chars": 1800,
+          "evidence_chars": 4000
+        },
+        "counts": {
+          "history_messages": 0,
+          "chunks": 10,
+          "assets": 0,
+          "assertions": 11,
+          "entities": 13,
+          "evidence": 11
+        },
+        "trimmed": {
+          "history_messages": 0,
+          "chunks": 0,
+          "assets": 0,
+          "assertions": 0,
+          "entities": 0,
+          "evidence": 0
+        },
+        "estimated_chars": {
+          "history": 2,
+          "chunks": 9934,
+          "assets": 2,
+          "assertions": 3370,
+          "entities": 1167,
+          "evidence": 3644,
+          "total_prompt": 20524
+        },
+        "final_ids": {
+          "chunk_ids": [
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0000:60f2a39499133f8b",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0046:62d11c1a6d7aa7b0",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0038:d14c7c3e8895af87",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0001:d092a3c54dda3081",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0011:2f385ae6c0a470b4",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0013:712f1f6bd9cf62f9"
+          ],
+          "asset_ids": [],
+          "assertion_ids": [
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r3",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688:r2",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94:r1",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49:r1",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0046:62d11c1a6d7aa7b0:r1",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0038:d14c7c3e8895af87:r1",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r4",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688:r1",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94:r2",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r1",
+            "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r2"
+          ],
+          "entity_ids": [
+            "americanfoulbrood_foul_brood",
+            "bee_bee",
+            "colony_old_stock",
+            "colony_strong_stock_of_bee",
+            "colony_swarm",
+            "colony_swarm_colony",
+            "hive_frame_hive",
+            "hive_hive",
+            "hive_straw_skep",
+            "hiveproduct_honeycomb",
+            "honey_honey",
+            "queen_queen",
+            "worker_bee"
+          ]
+        }
+      },
+      "passed": true,
+      "chunks": [
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0000:60f2a39499133f8b",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 45,
+          "page_end": 45,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Bee-Keeping\n\n33\n\nBee-Keeping\n\n\u2018* As each for the good of the whole is bent, And stores up his treasures for all, We hope for an evening, with hearts content, For the winter of life without lament. That summer is gone with its hours misspent,\n\nAnd the harvest is past recall!\u201d\u201d\u2014DR, AIKIN. A TRAVELLER who has much acquain"
+        },
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 60,
+          "page_end": 60,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Bees are usually sold in a straw skep, which will come in very handy, even if, as we should in this age of progression determine, to work with frame hives; if this be not the case, and the straw skep is to be maintained, put the swarm on its stand at once, and leave it to proceed as Nature directs, not forgetting to pr"
+        },
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 49,
+          "page_end": 49,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Bee-Keeping,\n\n37\n\nbe present with coolness and quietness; the rest is easy if my instructions are followed. During many practical expositions of Apiarian manipulations more than one lady has been courageously present in the manipulating room, by their own choice, without receiving any injury, although thousands of Bees"
+        },
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0046:62d11c1a6d7aa7b0",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 59,
+          "page_end": 59,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Some\n\nBee-keepers also aim only at increase of Bees, finding the sale of these pay better than honey; and, as a rule, it may be taken as correct, that if the breeding power be unduly pushed, the storage of honey must be sacrificed.\n\nI will now suppose the reader is contemplating starting as a Bee-keeper. My advice is n"
+        },
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0038:d14c7c3e8895af87",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 57,
+          "page_end": 57,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Bee-Keeping\n\n45\n\nto rise to this height, will be grievously disappointed, more especially if he repudiate the use of all the improve-\n\nments of modern times, the result of the collective experience and wisdom of able and truth-telling observers. Very strong stocks have been known to gather Io or 12 pounds per day durin"
+        },
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 60,
+          "page_end": 60,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "There\n\nis always a chance of an old stock harbouring disease, especially foul-brood, a fatal disease which I will describe in good time; which a novice would find impossible to eradicate. A fair prime or first swarm will weigh net three and a half pounds; a very good one, five pounds. They have been known to reach eigh"
+        },
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 60,
+          "page_end": 60,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "\u201cFeeding\u201d)\n\nIf the swarm is to be transferred to a frame hive, see that the latter be ready, and find your instructions in the chapter on \u201c Swarming.\u201d\n\nIf it be determined to commence with an old stock, a very good time to purchase is either in February, March, or April, thus gaining the advantage of the swarm when it "
+        },
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0001:d092a3c54dda3081",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 45,
+          "page_end": 46,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "\u2018* Ah! see where, robbed and murdered in that pit, Lies the still-heaving hive, at evening snatched, Beneath the cloud of guilt-concealing night, And fixed o\u2019er sulphur while not dreaming ill, D\n\n34"
+        },
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0011:2f385ae6c0a470b4",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 48,
+          "page_end": 48,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "Many persons reading my account of how the Bees may be used will naturally feel surprised, and, perhaps, doubt that their own courage or skill could ever arrive at a point that would enable them to remove all the Bees from a hive, shovel them up or drive them about wherever they desire them to go, and will, perhaps, th"
+        },
+        {
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0013:712f1f6bd9cf62f9",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "page_start": 49,
+          "page_end": 50,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "\u201c Driving,\u201d and the Bee-keeper can rifle their stores, yet preserve their lives and strengthen his stocks for next year, so that they will be able to do double work in reward for their master\u2019s humanity.\n\n\u2018* Leave them happy in their copious store, A part they\u2019ll give; and why desire ye more? And must ye kill? Mistaken"
+        }
+      ],
+      "assets": [],
+      "sources": [
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0000:60f2a39499133f8b",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0000:60f2a39499133f8b",
+          "rank": 1,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.1786239,
+            "metadata": {
+              "section_title": "Bee-Keeping",
+              "page_start": 45,
+              "hierarchy_path": "Bee-Keeping",
+              "canonical_terms": "bee_keeping,bee,keeping,as,and",
+              "tenant_id": "retrieval-eval-20260324",
+              "surface_terms": "Bee-Keeping,Bee,Keeping,As,And",
+              "provenance_ref": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:13:1467",
+              "token_count": 259,
+              "parser_version": "v1",
+              "quality_score": 1.0,
+              "section_heading": "Bee-Keeping",
+              "document_class": "book",
+              "next_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0001:d092a3c54dda3081",
+              "section": "Bee-Keeping",
+              "content_type": "text",
+              "language": "en",
+              "chunk_role": "body",
+              "chunker_version": "v1",
+              "title": "Bee-Keeping",
+              "ontology_classes": "Bee,Hive",
+              "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+              "prev_chunk_id": "",
+              "validation_status": "accepted",
+              "page_end": 45,
+              "chunk_index": 0,
+              "quality_flags": "ok"
+            },
+            "rerank_score": 0.15625
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94",
+          "rank": 2,
+          "score": 0.023993,
+          "selected": true,
+          "payload": {
+            "distance": 0.9760072,
+            "metadata": {
+              "hierarchy_path": "There",
+              "quality_flags": "ok",
+              "title": "Bee-Keeping",
+              "quality_score": 1.0,
+              "chunk_index": 50,
+              "ontology_classes": "Bee,Frame,Hive",
+              "surface_terms": "There,Bees,Nature",
+              "language": "en",
+              "validation_status": "accepted",
+              "provenance_ref": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:27923:28312",
+              "section_heading": "There",
+              "content_type": "text",
+              "page_start": 60,
+              "prev_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49",
+              "document_class": "book",
+              "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+              "chunk_role": "body",
+              "canonical_terms": "there,bees,nature",
+              "next_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688",
+              "section_title": "There",
+              "tenant_id": "retrieval-eval-20260324",
+              "chunker_version": "v1",
+              "parser_version": "v1",
+              "section": "There",
+              "page_end": 60,
+              "token_count": 76
+            },
+            "rerank_score": 0.148993
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+          "rank": 3,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.2890115,
+            "metadata": {
+              "surface_terms": "Bee-Keeping,,Bee,Keeping,During,Apiarian,Bees",
+              "provenance_ref": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:3506:8651",
+              "ontology_classes": "Bee,Frame,Hive,Honey,Queen",
+              "document_class": "book",
+              "prev_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0011:2f385ae6c0a470b4",
+              "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+              "section": "Bee-Keeping,",
+              "section_heading": "Bee-Keeping,",
+              "parser_version": "v1",
+              "title": "Bee-Keeping",
+              "chunk_index": 12,
+              "quality_score": 1.0,
+              "content_type": "text",
+              "chunk_role": "body",
+              "language": "en",
+              "tenant_id": "retrieval-eval-20260324",
+              "page_end": 49,
+              "token_count": 253,
+              "hierarchy_path": "Bee-Keeping,",
+              "canonical_terms": "bee_keeping,bee,keeping,during,apiarian,bees",
+              "quality_flags": "ok",
+              "section_title": "Bee-Keeping,",
+              "chunker_version": "v1",
+              "next_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0013:712f1f6bd9cf62f9",
+              "page_start": 49,
+              "validation_status": "accepted"
+            },
+            "rerank_score": 0.125
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0046:62d11c1a6d7aa7b0",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0046:62d11c1a6d7aa7b0",
+          "rank": 4,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.3439955,
+            "metadata": {
+              "page_start": 59,
+              "tenant_id": "retrieval-eval-20260324",
+              "token_count": 135,
+              "chunker_version": "v1",
+              "canonical_terms": "some,some_bee,bees,bee,my,black_bees,ligurians",
+              "provenance_ref": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:26473:27182",
+              "title": "Bee-Keeping",
+              "language": "en",
+              "section_heading": "Some",
+              "quality_flags": "ok",
+              "section_title": "Some",
+              "chunk_index": 46,
+              "ontology_classes": "Bee,Honey",
+              "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+              "next_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0047:fe40d4d41cf05ef5",
+              "document_class": "book",
+              "hierarchy_path": "Some",
+              "parser_version": "v1",
+              "page_end": 59,
+              "chunk_role": "body",
+              "validation_status": "accepted",
+              "quality_score": 1.0,
+              "content_type": "text",
+              "section": "Some",
+              "surface_terms": "Some,Some\n\nBee,Bees,Bee,My,Black Bees,Ligurians",
+              "prev_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0045:5593cbd32cc0d65a"
+            },
+            "rerank_score": 0.09375
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0038:d14c7c3e8895af87",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0038:d14c7c3e8895af87",
+          "rank": 5,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.3386376,
+            "metadata": {
+              "provenance_ref": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:13:22658",
+              "quality_flags": "ok",
+              "section_title": "Bee-Keeping",
+              "token_count": 152,
+              "hierarchy_path": "Bee-Keeping",
+              "chunk_index": 38,
+              "content_type": "text",
+              "prev_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0037:78390f73415dcabb",
+              "section": "Bee-Keeping",
+              "quality_score": 1.0,
+              "canonical_terms": "bee_keeping,bee,keeping,very,io,apiarian,bees",
+              "ontology_classes": "Bee,Comb,Honey",
+              "next_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0039:82c4d70f921c8d6d",
+              "parser_version": "v1",
+              "language": "en",
+              "validation_status": "accepted",
+              "surface_terms": "Bee-Keeping,Bee,Keeping,Very,Io,Apiarian,Bees",
+              "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+              "document_class": "book",
+              "section_heading": "Bee-Keeping",
+              "page_end": 57,
+              "chunker_version": "v1",
+              "title": "Bee-Keeping",
+              "chunk_role": "body",
+              "tenant_id": "retrieval-eval-20260324",
+              "page_start": 57
+            },
+            "rerank_score": 0.09375
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0014:eb78d3562342bcea",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0014:eb78d3562342bcea",
+          "rank": 6,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.3307314,
+            "metadata": {
+              "quality_score": 1.0,
+              "ontology_classes": "Bee,Hive",
+              "content_type": "text",
+              "section_heading": "A Manual Of Bee-Keeping",
+              "chunk_role": "body",
+              "surface_terms": "A Manual Of Bee-Keeping,Manual Of Bee,Keeping\n\nCottagers,Gentlemen,The,Scotland,English",
+              "validation_status": "accepted",
+              "canonical_terms": "a_manual_of_bee_keeping,manual_of_bee,keeping_cottagers,gentlemen,the,scotland,english",
+              "title": "Bee-Keeping",
+              "page_start": 50,
+              "document_class": "book",
+              "language": "en",
+              "quality_flags": "ok",
+              "chunk_index": 14,
+              "token_count": 92,
+              "section": "A Manual Of Bee-Keeping",
+              "page_end": 50,
+              "tenant_id": "retrieval-eval-20260324",
+              "section_title": "A Manual Of Bee-Keeping",
+              "parser_version": "v1",
+              "chunker_version": "v1",
+              "hierarchy_path": "A Manual Of Bee-Keeping",
+              "prev_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0013:712f1f6bd9cf62f9",
+              "next_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0015:2fa85bd5e581e102",
+              "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+              "provenance_ref": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:9055:9588"
+            },
+            "rerank_score": 0.09375
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0042:8f55359f8670dbc5",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0042:8f55359f8670dbc5",
+          "rank": 7,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.2934794,
+            "metadata": {
+              "language": "en",
+              "prev_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0041:5c2dfe11b0a22008",
+              "quality_score": 1.0,
+              "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+              "validation_status": "accepted",
+              "parser_version": "v1",
+              "ontology_classes": "Apiary,Bee,Frame,Hive,Honey",
+              "page_start": 58,
+              "document_class": "book",
+              "section": "A Manual Of Bee-Keeping",
+              "chunk_index": 42,
+              "hierarchy_path": "A Manual Of Bee-Keeping",
+              "next_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0043:30740fcdd3d8d7b4",
+              "surface_terms": "A Manual Of Bee-Keeping,Manual Of Bee,Keeping,The,Bee,Bees,Those",
+              "section_heading": "A Manual Of Bee-Keeping",
+              "chunk_role": "body",
+              "chunker_version": "v1",
+              "page_end": 58,
+              "content_type": "text",
+              "tenant_id": "retrieval-eval-20260324",
+              "canonical_terms": "a_manual_of_bee_keeping,manual_of_bee,keeping,the,bee,bees,those",
+              "provenance_ref": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:1681:24857",
+              "title": "Bee-Keeping",
+              "section_title": "A Manual Of Bee-Keeping",
+              "quality_flags": "ok",
+              "token_count": 203
+            },
+            "rerank_score": 0.09375
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0018:31ea0dd3fc0e8ea2",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0018:31ea0dd3fc0e8ea2",
+          "rank": 8,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.336215,
+            "metadata": {
+              "token_count": 150,
+              "chunk_index": 18,
+              "language": "en",
+              "document_class": "book",
+              "surface_terms": "Bee-Keeping,One,Bee,Francis Huber,He,Bees,His",
+              "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+              "next_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0019:95725e250ded2fac",
+              "hierarchy_path": "Bee-Keeping",
+              "ontology_classes": "Bee,Frame,Hive",
+              "section_heading": "Bee-Keeping",
+              "section": "Bee-Keeping",
+              "canonical_terms": "bee_keeping,one,bee,francis_huber,he,bees,his",
+              "content_type": "text",
+              "title": "Bee-Keeping",
+              "section_title": "Bee-Keeping",
+              "page_start": 51,
+              "parser_version": "v1",
+              "tenant_id": "retrieval-eval-20260324",
+              "quality_flags": "ok",
+              "page_end": 51,
+              "provenance_ref": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:11511:12414",
+              "quality_score": 1.0,
+              "chunk_role": "body",
+              "prev_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0017:a05611a205001d9e",
+              "chunker_version": "v1",
+              "validation_status": "accepted"
+            },
+            "rerank_score": 0.0625
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0031:c318b359c29741b4",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0031:c318b359c29741b4",
+          "rank": 9,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.3213763,
+            "metadata": {
+              "section_heading": "Bee-Keeping",
+              "document_class": "book",
+              "canonical_terms": "bee_keeping,bee,keeping,to,when",
+              "ontology_classes": "Bee,Honey,Nectar",
+              "page_end": 55,
+              "quality_flags": "ok",
+              "prev_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0030:b685b609d9ec1306",
+              "hierarchy_path": "Bee-Keeping",
+              "title": "Bee-Keeping",
+              "quality_score": 1.0,
+              "next_chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0032:0b9b89b87b5c48c9",
+              "tenant_id": "retrieval-eval-20260324",
+              "token_count": 70,
+              "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+              "provenance_ref": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:13:18571",
+              "surface_terms": "Bee-Keeping,Bee,Keeping,To,When",
+              "chunker_version": "v1",
+              "validation_status": "accepted",
+              "section": "Bee-Keeping",
+              "section_title": "Bee-Keeping",
+              "page_start": 55,
+              "content_type": "text",
+              "parser_version": "v1",
+              "chunk_role": "body",
+              "chunk_index": 31,
+              "language": "en"
+            },
+            "rerank_score": 0.0625
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0032:647f05d3915731b6",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0032:647f05d3915731b6",
+          "rank": 10,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.3428276,
+            "metadata": {
+              "content_type": "text",
+              "ontology_classes": "Pollen,Worker",
+              "provenance_ref": "21b905f8-5390-4d73-a771-9ca876e50f05:15178:2786",
+              "document_class": "book",
+              "validation_status": "accepted",
+              "surface_terms": "Egg Laying,This,Fig,They,Posterior Legs,Worker,Pollen",
+              "language": "en",
+              "chunker_version": "v1",
+              "token_count": 31,
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "quality_score": 1.0,
+              "quality_flags": "ok",
+              "next_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0033:392fed240ba696a9",
+              "chunk_index": 32,
+              "page_start": 25,
+              "page_end": 26,
+              "prev_chunk_id": "21b905f8-5390-4d73-a771-9ca876e50f05:c0031:d625680ec7a37917",
+              "chunk_role": "body",
+              "section_title": "This",
+              "tenant_id": "retrieval-eval-20260324",
+              "parser_version": "v1",
+              "hierarchy_path": "Egg Laying / This",
+              "section": "Egg Laying / This",
+              "title": "The Egypt",
+              "canonical_terms": "egg_laying,this,fig,they,posterior_legs,worker,pollen",
+              "section_heading": "This"
+            },
+            "rerank_score": 0.04875
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786",
+          "rank": 1,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.4790071,
+            "metadata": {
+              "important_terms": "brood,larv\u00e6,workers,drones,pollen (55),honey (49),queencell (42),Fig. 19 Eggs in the Cells",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_index": 0,
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0029/page-0029.png",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_type": "page_image",
+              "page_number": 29,
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0029:page_image:00:47b97cd148557786"
+            },
+            "rerank_score": 0.19125
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0022:page_image:00:060a277bf1ea845a",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0022:page_image:00:060a277bf1ea845a",
+          "rank": 2,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5365195,
+            "metadata": {
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0022/page-0022.png",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0022:page_image:00:060a277bf1ea845a",
+              "important_terms": "",
+              "asset_index": 0,
+              "page_number": 22,
+              "asset_type": "page_image",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0017:page_image:00:dedc5cc569eb1a35",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0017:page_image:00:dedc5cc569eb1a35",
+          "rank": 3,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5268413,
+            "metadata": {
+              "asset_index": 0,
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0017:page_image:00:dedc5cc569eb1a35",
+              "asset_type": "page_image",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0017/page-0017.png",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "page_number": 17,
+              "tenant_id": "retrieval-eval-20260324",
+              "important_terms": ""
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0019:page_image:00:4d66b8f938e886f9",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0019:page_image:00:4d66b8f938e886f9",
+          "rank": 4,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.526397,
+            "metadata": {
+              "page_number": 19,
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_index": 0,
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0019:page_image:00:4d66b8f938e886f9",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0019/page-0019.png",
+              "important_terms": "",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_type": "page_image"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0021:page_image:00:020c74637e0c9185",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0021:page_image:00:020c74637e0c9185",
+          "rank": 5,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5204507,
+            "metadata": {
+              "asset_type": "page_image",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0021:page_image:00:020c74637e0c9185",
+              "page_number": 21,
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_index": 0,
+              "important_terms": "",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0021/page-0021.png",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0023:page_image:00:57a7f402e276d8fc",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0023:page_image:00:57a7f402e276d8fc",
+          "rank": 6,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5193921,
+            "metadata": {
+              "tenant_id": "retrieval-eval-20260324",
+              "page_number": 23,
+              "important_terms": "",
+              "asset_index": 0,
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0023:page_image:00:57a7f402e276d8fc",
+              "asset_type": "page_image",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0023/page-0023.png"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0018:page_image:00:05f168e0384ff459",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0018:page_image:00:05f168e0384ff459",
+          "rank": 7,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5191716,
+            "metadata": {
+              "asset_type": "page_image",
+              "page_number": 18,
+              "asset_index": 0,
+              "tenant_id": "retrieval-eval-20260324",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0018/page-0018.png",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0018:page_image:00:05f168e0384ff459",
+              "important_terms": ""
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0025:page_image:00:bff02dd405e3ecf5",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0025:page_image:00:bff02dd405e3ecf5",
+          "rank": 8,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5174885,
+            "metadata": {
+              "asset_index": 0,
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_type": "page_image",
+              "page_number": 25,
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "important_terms": "",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0025/page-0025.png",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0025:page_image:00:bff02dd405e3ecf5"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0020:page_image:00:d67a23e2bd8ec562",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0020:page_image:00:d67a23e2bd8ec562",
+          "rank": 9,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5149884,
+            "metadata": {
+              "important_terms": "",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0020:page_image:00:d67a23e2bd8ec562",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0020/page-0020.png",
+              "asset_type": "page_image",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_index": 0,
+              "page_number": 20,
+              "tenant_id": "retrieval-eval-20260324"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0024:page_image:00:2995242128fc2c3e",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0024:page_image:00:2995242128fc2c3e",
+          "rank": 10,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5138738,
+            "metadata": {
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "important_terms": "",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0024/page-0024.png",
+              "asset_type": "page_image",
+              "asset_index": 0,
+              "page_number": 24,
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0024:page_image:00:2995242128fc2c3e"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0027:page_image:00:dd4f420e340c8df5",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0027:page_image:00:dd4f420e340c8df5",
+          "rank": 11,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5126007,
+            "metadata": {
+              "asset_index": 0,
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0027/page-0027.png",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "page_number": 27,
+              "important_terms": "",
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0027:page_image:00:dd4f420e340c8df5",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_type": "page_image"
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0026:page_image:00:72d78774a595e864",
+          "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+          "chunk_id": null,
+          "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0026:page_image:00:72d78774a595e864",
+          "rank": 12,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.5022948,
+            "metadata": {
+              "important_terms": "",
+              "page_number": 26,
+              "asset_id": "21b905f8-5390-4d73-a771-9ca876e50f05:p0026:page_image:00:72d78774a595e864",
+              "document_id": "21b905f8-5390-4d73-a771-9ca876e50f05",
+              "asset_type": "page_image",
+              "asset_path": "data/page_assets/21b905f8-5390-4d73-a771-9ca876e50f05/page-0026/page-0026.png",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_index": 0
+            },
+            "rerank_score": 0.08
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r3",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r3",
+          "entity_id": null,
+          "rank": 1,
+          "score": 0.9,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r3",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+            "subject_entity_id": "colony_swarm",
+            "predicate": "hasMember",
+            "object_entity_id": "bee_bee",
+            "object_literal": null,
+            "confidence": "0.9000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:46:47.476294+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688:r2",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688:r2",
+          "entity_id": null,
+          "rank": 2,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688:r2",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688",
+            "subject_entity_id": "colony_old_stock",
+            "predicate": "hasMember",
+            "object_entity_id": "worker_bee",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:50:55.763637+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94:r1",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94:r1",
+          "entity_id": null,
+          "rank": 3,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94:r1",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94",
+            "subject_entity_id": "colony_swarm_colony",
+            "predicate": "usesHive",
+            "object_entity_id": "hive_straw_skep",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:50:44.125768+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49:r1",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49:r1",
+          "entity_id": null,
+          "rank": 4,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49:r1",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49",
+            "subject_entity_id": "colony_swarm",
+            "predicate": "affectedBy",
+            "object_entity_id": "americanfoulbrood_foul_brood",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:50:31.720715+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0046:62d11c1a6d7aa7b0:r1",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0046:62d11c1a6d7aa7b0",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0046:62d11c1a6d7aa7b0:r1",
+          "entity_id": null,
+          "rank": 5,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0046:62d11c1a6d7aa7b0:r1",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0046:62d11c1a6d7aa7b0",
+            "subject_entity_id": "colony_swarm",
+            "predicate": "produces",
+            "object_entity_id": "honey_honey",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:50:20.172829+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0038:d14c7c3e8895af87:r1",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0038:d14c7c3e8895af87",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0038:d14c7c3e8895af87:r1",
+          "entity_id": null,
+          "rank": 6,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0038:d14c7c3e8895af87:r1",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0038:d14c7c3e8895af87",
+            "subject_entity_id": "colony_strong_stock_of_bee",
+            "predicate": "produces",
+            "object_entity_id": "hiveproduct_honeycomb",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:49:19.513316+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r4",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r4",
+          "entity_id": null,
+          "rank": 7,
+          "score": 0.8,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r4",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+            "subject_entity_id": "colony_swarm",
+            "predicate": "hasMember",
+            "object_entity_id": "queen_queen",
+            "object_literal": null,
+            "confidence": "0.8000",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:46:47.476294+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688:r1",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688:r1",
+          "entity_id": null,
+          "rank": 8,
+          "score": 0.75,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688:r1",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688",
+            "subject_entity_id": "colony_old_stock",
+            "predicate": "usesHive",
+            "object_entity_id": "hive_hive",
+            "object_literal": null,
+            "confidence": "0.7500",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:50:55.763637+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94:r2",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94:r2",
+          "entity_id": null,
+          "rank": 9,
+          "score": 0.75,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94:r2",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0050:b8c477a728572b94",
+            "subject_entity_id": "colony_swarm_colony",
+            "predicate": "usesHive",
+            "object_entity_id": "hive_frame_hive",
+            "object_literal": null,
+            "confidence": "0.7500",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:50:44.125768+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r1",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r1",
+          "entity_id": null,
+          "rank": 10,
+          "score": 0.75,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r1",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+            "subject_entity_id": "colony_swarm",
+            "predicate": "usesHive",
+            "object_entity_id": "hive_straw_skep",
+            "object_literal": null,
+            "confidence": "0.7500",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:46:47.476294+00:00"
+          }
+        },
+        {
+          "source_kind": "assertion",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r2",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+          "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r2",
+          "entity_id": null,
+          "rank": 11,
+          "score": 0.72,
+          "selected": true,
+          "payload": {
+            "assertion_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073:r2",
+            "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0012:cd0e7d44ce454073",
+            "subject_entity_id": "colony_swarm",
+            "predicate": "usesHive",
+            "object_entity_id": "hive_frame_hive",
+            "object_literal": null,
+            "confidence": "0.7200",
+            "qualifiers": {},
+            "status": "accepted",
+            "created_at": "2026-03-25T10:46:47.476294+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "americanfoulbrood_foul_brood",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "americanfoulbrood_foul_brood",
+          "rank": 1,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "americanfoulbrood_foul_brood",
+            "canonical_name": "Foul Brood",
+            "entity_type": "AmericanFoulbrood",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:50:31.720715+00:00",
+            "updated_at": "2026-03-25T10:50:31.720715+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "bee_bee",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "bee_bee",
+          "rank": 2,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "bee_bee",
+            "canonical_name": "Bee",
+            "entity_type": "Bee",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:37:39.381507+00:00",
+            "updated_at": "2026-03-25T10:55:55.997244+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "colony_old_stock",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "colony_old_stock",
+          "rank": 3,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "colony_old_stock",
+            "canonical_name": "Old Stock",
+            "entity_type": "Colony",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:50:55.763637+00:00",
+            "updated_at": "2026-03-25T10:50:55.763637+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "colony_strong_stock_of_bee",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "colony_strong_stock_of_bee",
+          "rank": 4,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "colony_strong_stock_of_bee",
+            "canonical_name": "Strong Stock Of Bee",
+            "entity_type": "Colony",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:49:19.513316+00:00",
+            "updated_at": "2026-03-25T10:49:19.513316+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "colony_swarm",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "colony_swarm",
+          "rank": 5,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "colony_swarm",
+            "canonical_name": "Swarm",
+            "entity_type": "Colony",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:46:47.476294+00:00",
+            "updated_at": "2026-03-25T10:50:31.720715+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "colony_swarm_colony",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "colony_swarm_colony",
+          "rank": 6,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "colony_swarm_colony",
+            "canonical_name": "Swarm Colony",
+            "entity_type": "Colony",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:50:44.125768+00:00",
+            "updated_at": "2026-03-25T10:51:58.052638+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "hive_frame_hive",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "hive_frame_hive",
+          "rank": 7,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "hive_frame_hive",
+            "canonical_name": "Frame Hive",
+            "entity_type": "Hive",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:46:47.476294+00:00",
+            "updated_at": "2026-03-25T10:50:44.125768+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "hive_hive",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "hive_hive",
+          "rank": 8,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "hive_hive",
+            "canonical_name": "Hive",
+            "entity_type": "Hive",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:35:50.633169+00:00",
+            "updated_at": "2026-03-25T10:52:20.615850+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "hive_straw_skep",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "hive_straw_skep",
+          "rank": 9,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "hive_straw_skep",
+            "canonical_name": "Straw Skep",
+            "entity_type": "Hive",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:46:47.476294+00:00",
+            "updated_at": "2026-03-25T10:50:44.125768+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "hiveproduct_honeycomb",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "hiveproduct_honeycomb",
+          "rank": 10,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "hiveproduct_honeycomb",
+            "canonical_name": "Honeycomb",
+            "entity_type": "HiveProduct",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:49:19.513316+00:00",
+            "updated_at": "2026-03-25T10:49:19.513316+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "honey_honey",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "honey_honey",
+          "rank": 11,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "honey_honey",
+            "canonical_name": "Honey",
+            "entity_type": "Honey",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:50:20.172829+00:00",
+            "updated_at": "2026-03-25T10:50:20.172829+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "queen_queen",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "queen_queen",
+          "rank": 12,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "queen_queen",
+            "canonical_name": "Queen",
+            "entity_type": "Queen",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:35:43.116213+00:00",
+            "updated_at": "2026-03-25T10:55:09.495845+00:00"
+          }
+        },
+        {
+          "source_kind": "entity",
+          "source_id": "worker_bee",
+          "document_id": null,
+          "chunk_id": null,
+          "assertion_id": null,
+          "entity_id": "worker_bee",
+          "rank": 13,
+          "score": null,
+          "selected": true,
+          "payload": {
+            "entity_id": "worker_bee",
+            "canonical_name": "Bee",
+            "entity_type": "Worker",
+            "source": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+            "created_at": "2026-03-25T10:50:55.763637+00:00",
+            "updated_at": "2026-03-25T10:50:55.763637+00:00"
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0049:393842cb3500fd49",
+          "rank": null,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 60,
+            "page_end": 60
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0051:fd4ee69029919688",
+          "rank": null,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 60,
+            "page_end": 60
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0001:d092a3c54dda3081",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0001:d092a3c54dda3081",
+          "rank": null,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 45,
+            "page_end": 46
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0011:2f385ae6c0a470b4",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0011:2f385ae6c0a470b4",
+          "rank": null,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 48,
+            "page_end": 48
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0013:712f1f6bd9cf62f9",
+          "document_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4",
+          "chunk_id": "5c37ace5-44ba-4aa7-981a-3cb82ab5cbf4:c0013:712f1f6bd9cf62f9",
+          "rank": null,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 49,
+            "page_end": 50
+          }
+        }
+      ]
+    },
+    {
+      "id": "visual-scan-honeybee",
+      "query": "Describe the visual or scanned content available in this sample and cite the image evidence.",
+      "tenant_id": "retrieval-eval-20260324",
+      "top_k": 5,
+      "question_type": "visual_lookup",
+      "retrieval_mode": "multimodal_focus",
+      "expected_document_filenames": [
+        "honeybeeitsnatur00cowa_bw.pdf"
+      ],
+      "scope_document_filenames": [
+        "honeybeeitsnatur00cowa_bw.pdf"
+      ],
+      "expected_focus": "",
+      "selected_document_ids": [
+        "417bcab0-2b89-412c-be5e-ecf035b8916b"
+      ],
+      "selected_document_filenames": [
+        "honeybeeitsnatur00cowa_bw.pdf"
+      ],
+      "expected_document_hits": [
+        "honeybeeitsnatur00cowa_bw.pdf"
+      ],
+      "expected_terms": [
+        "harvard",
+        "museum",
+        "library"
+      ],
+      "term_hits": [
+        "harvard",
+        "museum",
+        "library"
+      ],
+      "term_coverage": 1.0,
+      "row_term_coverage": 1.0,
+      "focus_phrase_hit": false,
+      "row_focus_hit": false,
+      "min_term_coverage": 0.0,
+      "expect_assets": true,
+      "expected_asset_terms": [
+        "harvard",
+        "museum",
+        "library",
+        "seal"
+      ],
+      "asset_expectation_met": true,
+      "asset_term_hits": [
+        "harvard",
+        "museum",
+        "library",
+        "seal"
+      ],
+      "asset_term_coverage": 1.0,
+      "asset_row_term_coverage": 1.0,
+      "asset_link_count": 1,
+      "asset_link_max_confidence": 0.95,
+      "min_asset_link_confidence": 0.68,
+      "forbidden_document_filenames": [],
+      "forbidden_document_hits": [],
+      "forbidden_terms": [],
+      "forbidden_term_hits": [],
+      "min_selected_chunks": 0,
+      "min_selected_assets": 1,
+      "max_selected_documents": 1,
+      "selected_chunk_count": 2,
+      "selected_asset_count": 2,
+      "selected_assertion_count": 0,
+      "selected_entity_count": 0,
+      "prompt_context": {
+        "question": "Describe the visual or scanned content available in this sample and cite the image evidence.",
+        "normalized_query": "Describe the visual or scanned content available in this sample and cite the image evidence.",
+        "question_type": "visual_lookup",
+        "budgets": {
+          "prompt_chars": 32000,
+          "history_chars": 2800,
+          "chunk_chars": 14000,
+          "asset_chars": 3200,
+          "assertion_chars": 4000,
+          "entity_chars": 1800,
+          "evidence_chars": 4000
+        },
+        "counts": {
+          "history_messages": 0,
+          "chunks": 2,
+          "assets": 2,
+          "assertions": 0,
+          "entities": 0,
+          "evidence": 0
+        },
+        "trimmed": {
+          "history_messages": 0,
+          "chunks": 0,
+          "assets": 0,
+          "assertions": 0,
+          "entities": 0,
+          "evidence": 0
+        },
+        "estimated_chars": {
+          "history": 2,
+          "chunks": 648,
+          "assets": 2679,
+          "assertions": 2,
+          "entities": 2,
+          "evidence": 2,
+          "total_prompt": 4490
+        },
+        "final_ids": {
+          "chunk_ids": [
+            "417bcab0-2b89-412c-be5e-ecf035b8916b:c0004:880c11cf661f004a",
+            "417bcab0-2b89-412c-be5e-ecf035b8916b:c0000:8363f915b1463c6d"
+          ],
+          "asset_ids": [
+            "417bcab0-2b89-412c-be5e-ecf035b8916b:p0002:page_image:00:9fb98d1b9c1928ba",
+            "417bcab0-2b89-412c-be5e-ecf035b8916b:p0003:page_image:00:3c8b37641acd2205"
+          ],
+          "assertion_ids": [],
+          "entity_ids": []
+        }
+      },
+      "passed": true,
+      "chunks": [
+        {
+          "chunk_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:c0004:880c11cf661f004a",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "page_start": 2,
+          "page_end": 2,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "T. W. Cowan\n\nHARVARD UNIVERSITY.\n\n[seal]\n\nLIBRARY\n\nOF THE\n\nMUSEUM OF COMPARATIVE ZO\u00d6LOGY.\n\nNo 12,766\n\n4 Aug., 1891. 28 Sept."
+        },
+        {
+          "chunk_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:c0000:8363f915b1463c6d",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "page_start": 1,
+          "page_end": 1,
+          "section_title": "",
+          "linked_asset_count": 0,
+          "preview": "The\n\nHoney Bee"
+        }
+      ],
+      "assets": [
+        {
+          "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0002:page_image:00:9fb98d1b9c1928ba",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "page_number": 2,
+          "asset_type": "page_image",
+          "label": "",
+          "preview": ""
+        },
+        {
+          "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0003:page_image:00:3c8b37641acd2205",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "page_number": 3,
+          "asset_type": "page_image",
+          "label": "",
+          "preview": ""
+        }
+      ],
+      "sources": [
+        {
+          "source_kind": "chunk",
+          "source_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:c0004:880c11cf661f004a",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "chunk_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:c0004:880c11cf661f004a",
+          "rank": 1,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.5141807,
+            "metadata": {
+              "section": "Honey Bee / T. W. Cowan",
+              "page_start": 2,
+              "hierarchy_path": "Honey Bee / T. W. Cowan",
+              "language": "en",
+              "chunk_index": 4,
+              "quality_score": 1.0,
+              "page_end": 2,
+              "section_title": "T. W. Cowan",
+              "section_heading": "T. W. Cowan",
+              "document_class": "book",
+              "chunk_role": "body",
+              "next_chunk_id": "",
+              "canonical_terms": "honey_bee,t_w_cowan,cowan,no,aug,sept",
+              "validation_status": "accepted",
+              "chunker_version": "v1",
+              "content_type": "text",
+              "tenant_id": "retrieval-eval-20260324",
+              "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+              "parser_version": "v1",
+              "title": "Honey Bee",
+              "provenance_ref": "417bcab0-2b89-412c-be5e-ecf035b8916b:72:207",
+              "quality_flags": "ok",
+              "token_count": 21,
+              "surface_terms": "Honey Bee,T. W. Cowan,Cowan,No,Aug,Sept",
+              "prev_chunk_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:c0003:70e309882de82cd6",
+              "ontology_classes": ""
+            },
+            "rerank_score": 0.020833
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0003:page_image:00:3c8b37641acd2205",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "chunk_id": null,
+          "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0003:page_image:00:3c8b37641acd2205",
+          "rank": 1,
+          "score": 0.084656,
+          "selected": true,
+          "payload": {
+            "distance": 0.91534394,
+            "metadata": {
+              "important_terms": "",
+              "asset_index": 0,
+              "asset_type": "page_image",
+              "page_number": 3,
+              "asset_path": "data/page_assets/417bcab0-2b89-412c-be5e-ecf035b8916b/page-0003/page-0003.png",
+              "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+              "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0003:page_image:00:3c8b37641acd2205",
+              "tenant_id": "retrieval-eval-20260324"
+            },
+            "rerank_score": 0.508823
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0005:page_image:00:b84213e0fe3f3fca",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "chunk_id": null,
+          "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0005:page_image:00:b84213e0fe3f3fca",
+          "rank": 2,
+          "score": 0.081805,
+          "selected": false,
+          "payload": {
+            "distance": 0.91819537,
+            "metadata": {
+              "important_terms": "",
+              "asset_type": "page_image",
+              "page_number": 5,
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_index": 0,
+              "asset_path": "data/page_assets/417bcab0-2b89-412c-be5e-ecf035b8916b/page-0005/page-0005.png",
+              "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+              "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0005:page_image:00:b84213e0fe3f3fca"
+            },
+            "rerank_score": 0.505972
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0004:page_image:00:7748599a41bbc23b",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "chunk_id": null,
+          "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0004:page_image:00:7748599a41bbc23b",
+          "rank": 3,
+          "score": 0.067583,
+          "selected": false,
+          "payload": {
+            "distance": 0.93241715,
+            "metadata": {
+              "asset_path": "data/page_assets/417bcab0-2b89-412c-be5e-ecf035b8916b/page-0004/page-0004.png",
+              "page_number": 4,
+              "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+              "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0004:page_image:00:7748599a41bbc23b",
+              "asset_index": 0,
+              "asset_type": "page_image",
+              "tenant_id": "retrieval-eval-20260324",
+              "important_terms": ""
+            },
+            "rerank_score": 0.49175
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0001:page_image:00:157a4445426f262f",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "chunk_id": null,
+          "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0001:page_image:00:157a4445426f262f",
+          "rank": 4,
+          "score": 0.0,
+          "selected": false,
+          "payload": {
+            "distance": 1.154453,
+            "metadata": {
+              "page_number": 1,
+              "asset_type": "page_image",
+              "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+              "important_terms": "The Honey Bee,Its Natural History,Anatomy,Physiology,T. W. Cowan",
+              "tenant_id": "retrieval-eval-20260324",
+              "asset_index": 0,
+              "asset_path": "data/page_assets/417bcab0-2b89-412c-be5e-ecf035b8916b/page-0001/page-0001.png",
+              "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0001:page_image:00:157a4445426f262f"
+            },
+            "rerank_score": 0.435833
+          }
+        },
+        {
+          "source_kind": "asset_hit",
+          "source_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0002:page_image:00:9fb98d1b9c1928ba",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "chunk_id": null,
+          "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0002:page_image:00:9fb98d1b9c1928ba",
+          "rank": 5,
+          "score": 0.0,
+          "selected": true,
+          "payload": {
+            "distance": 1.0765758,
+            "metadata": {
+              "asset_index": 0,
+              "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+              "asset_path": "data/page_assets/417bcab0-2b89-412c-be5e-ecf035b8916b/page-0002/page-0002.png",
+              "asset_type": "page_image",
+              "tenant_id": "retrieval-eval-20260324",
+              "page_number": 2,
+              "important_terms": "Harvard University,Harvard seal,Library,Museum of Comparative Zo\u00f6logy,No 12,766,4 Aug. 1891",
+              "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0002:page_image:00:9fb98d1b9c1928ba"
+            },
+            "rerank_score": 0.424167
+          }
+        },
+        {
+          "source_kind": "asset_link",
+          "source_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0002:page_image:00:9fb98d1b9c1928ba",
+          "document_id": null,
+          "chunk_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:c0004:880c11cf661f004a",
+          "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0002:page_image:00:9fb98d1b9c1928ba",
+          "rank": null,
+          "score": 0.95,
+          "selected": true,
+          "payload": {
+            "link_id": "91bdb4a9-dece-4cf0-a07a-8ca99483a64e",
+            "chunk_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:c0004:880c11cf661f004a",
+            "asset_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:p0002:page_image:00:9fb98d1b9c1928ba",
+            "link_type": "text_overlap",
+            "confidence": "0.9500",
+            "metadata_json": {
+              "reason": "shared_visual_terms",
+              "asset_type": "page_image",
+              "page_number": 2,
+              "shared_terms": [
+                "1891",
+                "comparative",
+                "harvard",
+                "library",
+                "logy",
+                "museum",
+                "seal",
+                "sept"
+              ],
+              "page_chunk_count": 1
+            },
+            "created_at": "2026-03-26T01:19:38.613570+00:00"
+          }
+        },
+        {
+          "source_kind": "chunk",
+          "source_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:c0000:8363f915b1463c6d",
+          "document_id": "417bcab0-2b89-412c-be5e-ecf035b8916b",
+          "chunk_id": "417bcab0-2b89-412c-be5e-ecf035b8916b:c0000:8363f915b1463c6d",
+          "rank": null,
+          "score": 0.535833,
+          "selected": true,
+          "payload": {
+            "derived_from": "final_context_bundle",
+            "page_start": 1,
+            "page_end": 1
+          }
+        }
+      ]
+    }
+  ]
+}

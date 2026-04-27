@@ -1,0 +1,378 @@
+{
+  "tenant_id": "shared",
+  "top_k": 5,
+  "results": [
+    {
+      "id": "queen-mating",
+      "query": "How does the queen mate and what happens after mating?",
+      "expected_focus": "queen biology and reproduction",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0003:c38688ed4341824c",
+          "distance": 0.8151502,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 2,
+          "page_end": 2,
+          "preview": "THE QUEEN\n\n\u00a7 5. If for some reason the queen is unable to mate within the\n\nfirst three weeks of her life, she loses the desire to mate, but is nevertheless able to lay eggs that will hatch, as will be shown further (9).\n\nThese\n\nproduce only drones. In about two days after mating,"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0013:afb2d2c8ebe3e0df",
+          "distance": 0.9109012,
+          "section_title": "That",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 5,
+          "page_end": 5,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large num"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0002:84adca91642b4706",
+          "distance": 0.91901183,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 1,
+          "page_end": 1,
+          "preview": "life, though- she often lives three or four Pig. 1\u2014The Queenbee years (30). On her return to the hive, after mating, if she has been fecundated, the male organs may be seen attached to her abdomen."
+        },
+        {
+          "rank": 4,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0001:1582d15b7226dfd6",
+          "distance": 0.9330075,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 1,
+          "page_end": 1,
+          "preview": "The Queen\n\n\u00a7 3. The mother-bee, as she is often called, is the only perfect female in the colony and is the true mother of it. Her only duty is to lay the eggs for the propogation of the species. She is a little larger than the worker but not so large as the drone. Her body is lo"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0007:2335f7881388e356",
+          "distance": 0.94762206,
+          "section_title": "Egg Laying",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 4,
+          "page_end": 4,
+          "preview": "Egg Laying\n\nA globular sac will be noted, attached to the main oviduct by a\n\nshort, tubular stem. A French naturalist, M. Audouin, first discovered the true character of this sac as the spermatheca, which contains the\n\nmale semen; and Prof. Leuckart computes its size as sufficien"
+        }
+      ]
+    },
+    {
+      "id": "varroa-monitoring",
+      "query": "What should a beekeeper watch when monitoring for varroa in a colony?",
+      "expected_focus": "disease, parasites, monitoring",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "050e1458-d2a7-4f5d-953d-0ed684ac807c:c0012:adb754f8b9cdabbe",
+          "distance": 1.1534367,
+          "section_title": "A Manual Of Bee-Keeping",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 4,
+          "page_end": 4,
+          "preview": "A Manual Of Bee-Keeping\n\nseasons the last, may be absent ; the second never. The Queen is the only perfect female.\n\n\u2018\u00ab First of the throng and foremost of the whole, * One stands confest the Sovereign and the soul.\u201d\u2014VIRGIL.\n\nIf the colony has not swarmed, the mother of every othe"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0001:1582d15b7226dfd6",
+          "distance": 1.1964241,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 1,
+          "page_end": 1,
+          "preview": "The Queen\n\n\u00a7 3. The mother-bee, as she is often called, is the only perfect female in the colony and is the true mother of it. Her only duty is to lay the eggs for the propogation of the species. She is a little larger than the worker but not so large as the drone. Her body is lo"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0013:afb2d2c8ebe3e0df",
+          "distance": 1.2004564,
+          "section_title": "That",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 5,
+          "page_end": 5,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large num"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "050e1458-d2a7-4f5d-953d-0ed684ac807c:c0009:3812195ce1f704d8",
+          "distance": 1.2173488,
+          "section_title": "Natural History Of The Honey Bee. 3",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 3,
+          "page_end": 3,
+          "preview": "The leading feature in the natural history of Bees, and one which distinguishes them from almost all other insects, is their singular distribution into three different kinds, constituting to all appearance so many different\u2019 modifications of sex.\n\nA hive of Bees in June consists "
+        },
+        {
+          "rank": 5,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0004:2bfeeed8c559fa9c",
+          "distance": 1.2211821,
+          "section_title": "Ovaries",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 3,
+          "page_end": 3,
+          "preview": "Ovaries\n\nlimited space often causes the queen to desert the breeding apartment and induce swarming.\n\n\u00a7 6. Instinct teaches the workers the necessity of having a queen that is prolific, and should she become barren from any cause, or be lost or even decrease in her fer-\n\ntility (1"
+        }
+      ]
+    },
+    {
+      "id": "straw-skeps",
+      "query": "What are the advantages and limitations of straw skeps?",
+      "expected_focus": "hive equipment and management tradeoffs",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "050e1458-d2a7-4f5d-953d-0ed684ac807c:c0015:884d18a9046ea3dc",
+          "distance": 1.3231926,
+          "section_title": "Natural History Of The Honey Bee. 5",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 5,
+          "page_end": 5,
+          "preview": "The Bees now seal over the cell with a cover made of wax and Bee-bread, whose colour matches that of the surrounding old combs. This cover is convex, that of the Drone cells more so than that of the Workers, and minute holes in it admit air to the larva. Like most other insects, "
+        },
+        {
+          "rank": 2,
+          "chunk_id": "050e1458-d2a7-4f5d-953d-0ed684ac807c:c0005:ca17973a2124e9b6",
+          "distance": 1.3341341,
+          "section_title": "A Manual Of Bee-Keeping",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 2,
+          "page_end": 2,
+          "preview": "A Manual Of Bee-Keeping\n\nupon and studied the Bee, the wonders it unfolds are not yet exhausted.\n\nThe patience and sagacity of the naturalist have had an ample field for exercise in the study of the structure, physiology, and domestic economy of Bees; their preservation and incre"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "050e1458-d2a7-4f5d-953d-0ed684ac807c:c0016:67de32d16b228133",
+          "distance": 1.4357479,
+          "section_title": "Natural History Of The Honey Bee. 5",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 5,
+          "page_end": 5,
+          "preview": "or semi-transparent film, resembling gold-beater\u2019s skin, but without a wrinkle. This film is never removed by the bees, all other larve bred in the cell making new films, which remain until the capacity of the cell is sensibly reduced. These films take and retain the hexagon form"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "050e1458-d2a7-4f5d-953d-0ed684ac807c:c0003:e1b6c21a1bb2b05f",
+          "distance": 1.4450712,
+          "section_title": "Of The Honey",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 1,
+          "page_end": 1,
+          "preview": "Of The Honey\n\nBEE.\n\n\u2018* What atom forms of insect life appear ! And who can follow Nature's pencil here?\u201d\"\u2014Mrs. BARBAULD.\n\nFROM the very earliest historic times, the Hive Bee has been cultivated by man for the sake of the delicious honey and useful wax that it produces, as well as"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0007:2335f7881388e356",
+          "distance": 1.4638746,
+          "section_title": "Egg Laying",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 4,
+          "page_end": 4,
+          "preview": "Egg Laying\n\nA globular sac will be noted, attached to the main oviduct by a\n\nshort, tubular stem. A French naturalist, M. Audouin, first discovered the true character of this sac as the spermatheca, which contains the\n\nmale semen; and Prof. Leuckart computes its size as sufficien"
+        }
+      ]
+    },
+    {
+      "id": "supers-management",
+      "query": "How should supers be supplied and managed in the hive?",
+      "expected_focus": "supers and honey management",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0005:61879b19f2b74059",
+          "distance": 1.0189562,
+          "section_title": "This",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 3,
+          "page_end": 3,
+          "preview": "This\n\nthey do by 'building queencells\n\n(Pig. 5.) (34) which they supply with eggs from worker-cells. The bees also rear queens when preparing to swarm (96); the first queen hatched destroys the others and the bees usually help her to do it unless they wish to swarm (98) again.\n\nP"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0003:c38688ed4341824c",
+          "distance": 1.0269984,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 2,
+          "page_end": 2,
+          "preview": "THE QUEEN\n\n\u00a7 5. If for some reason the queen is unable to mate within the\n\nfirst three weeks of her life, she loses the desire to mate, but is nevertheless able to lay eggs that will hatch, as will be shown further (9).\n\nThese\n\nproduce only drones. In about two days after mating,"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "050e1458-d2a7-4f5d-953d-0ed684ac807c:c0012:adb754f8b9cdabbe",
+          "distance": 1.0665673,
+          "section_title": "A Manual Of Bee-Keeping",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 4,
+          "page_end": 4,
+          "preview": "A Manual Of Bee-Keeping\n\nseasons the last, may be absent ; the second never. The Queen is the only perfect female.\n\n\u2018\u00ab First of the throng and foremost of the whole, * One stands confest the Sovereign and the soul.\u201d\u2014VIRGIL.\n\nIf the colony has not swarmed, the mother of every othe"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0004:2bfeeed8c559fa9c",
+          "distance": 1.0798951,
+          "section_title": "Ovaries",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 3,
+          "page_end": 3,
+          "preview": "Ovaries\n\nlimited space often causes the queen to desert the breeding apartment and induce swarming.\n\n\u00a7 6. Instinct teaches the workers the necessity of having a queen that is prolific, and should she become barren from any cause, or be lost or even decrease in her fer-\n\ntility (1"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0001:1582d15b7226dfd6",
+          "distance": 1.0980837,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 1,
+          "page_end": 1,
+          "preview": "The Queen\n\n\u00a7 3. The mother-bee, as she is often called, is the only perfect female in the colony and is the true mother of it. Her only duty is to lay the eggs for the propogation of the species. She is a little larger than the worker but not so large as the drone. Her body is lo"
+        }
+      ]
+    },
+    {
+      "id": "pollen-use",
+      "query": "How do bees use pollen and why is it important to the colony?",
+      "expected_focus": "pollen function and colony needs",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0005:61879b19f2b74059",
+          "distance": 1.1759434,
+          "section_title": "This",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 3,
+          "page_end": 3,
+          "preview": "This\n\nthey do by 'building queencells\n\n(Pig. 5.) (34) which they supply with eggs from worker-cells. The bees also rear queens when preparing to swarm (96); the first queen hatched destroys the others and the bees usually help her to do it unless they wish to swarm (98) again.\n\nP"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0013:afb2d2c8ebe3e0df",
+          "distance": 1.2223163,
+          "section_title": "That",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 5,
+          "page_end": 5,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large num"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "050e1458-d2a7-4f5d-953d-0ed684ac807c:c0015:884d18a9046ea3dc",
+          "distance": 1.2332397,
+          "section_title": "Natural History Of The Honey Bee. 5",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 5,
+          "page_end": 5,
+          "preview": "The Bees now seal over the cell with a cover made of wax and Bee-bread, whose colour matches that of the surrounding old combs. This cover is convex, that of the Drone cells more so than that of the Workers, and minute holes in it admit air to the larva. Like most other insects, "
+        },
+        {
+          "rank": 4,
+          "chunk_id": "050e1458-d2a7-4f5d-953d-0ed684ac807c:c0009:3812195ce1f704d8",
+          "distance": 1.2461729,
+          "section_title": "Natural History Of The Honey Bee. 3",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 3,
+          "page_end": 3,
+          "preview": "The leading feature in the natural history of Bees, and one which distinguishes them from almost all other insects, is their singular distribution into three different kinds, constituting to all appearance so many different\u2019 modifications of sex.\n\nA hive of Bees in June consists "
+        },
+        {
+          "rank": 5,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0001:1582d15b7226dfd6",
+          "distance": 1.2510445,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 1,
+          "page_end": 1,
+          "preview": "The Queen\n\n\u00a7 3. The mother-bee, as she is often called, is the only perfect female in the colony and is the true mother of it. Her only duty is to lay the eggs for the propogation of the species. She is a little larger than the worker but not so large as the drone. Her body is lo"
+        }
+      ]
+    },
+    {
+      "id": "winter-preparation",
+      "query": "How should colonies be prepared for winter or poor forage periods?",
+      "expected_focus": "seasonal management and feeding",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0013:afb2d2c8ebe3e0df",
+          "distance": 1.3340836,
+          "section_title": "That",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 5,
+          "page_end": 5,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large num"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0009:4e86834b3c49d2a9",
+          "distance": 1.3574317,
+          "section_title": "Egg Laying",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 4,
+          "page_end": 4,
+          "preview": "\u00a7 10. The queen usually lays from February to October, but very early in the spring she lays sparingly. When fruit and flowers bloom, and the bees are getting honey and pollen, she lays most rapidly."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0004:2bfeeed8c559fa9c",
+          "distance": 1.3592119,
+          "section_title": "Ovaries",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 3,
+          "page_end": 3,
+          "preview": "Ovaries\n\nlimited space often causes the queen to desert the breeding apartment and induce swarming.\n\n\u00a7 6. Instinct teaches the workers the necessity of having a queen that is prolific, and should she become barren from any cause, or be lost or even decrease in her fer-\n\ntility (1"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "3a937ab1-3b4e-4839-a08a-c6b1ae3096d7:c0005:61879b19f2b74059",
+          "distance": 1.389711,
+          "section_title": "This",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 3,
+          "page_end": 3,
+          "preview": "This\n\nthey do by 'building queencells\n\n(Pig. 5.) (34) which they supply with eggs from worker-cells. The bees also rear queens when preparing to swarm (96); the first queen hatched destroys the others and the bees usually help her to do it unless they wish to swarm (98) again.\n\nP"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "050e1458-d2a7-4f5d-953d-0ed684ac807c:c0012:adb754f8b9cdabbe",
+          "distance": 1.4354259,
+          "section_title": "A Manual Of Bee-Keeping",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 4,
+          "page_end": 4,
+          "preview": "A Manual Of Bee-Keeping\n\nseasons the last, may be absent ; the second never. The Queen is the only perfect female.\n\n\u2018\u00ab First of the throng and foremost of the whole, * One stands confest the Sovereign and the soul.\u201d\u2014VIRGIL.\n\nIf the colony has not swarmed, the mother of every othe"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "agent-queen-mating",
+    "tenant_id": "retrieval-eval-20260324",
+    "query": "How does the queen mate and what happens after mating?",
+    "expected_question_type": "procedure",
+    "expected_abstained": false,
+    "expected_document_filenames": ["DadantFirstLessonsInBeekeeping.pdf"],
+    "expected_citation_kinds": ["chunk"],
+    "expected_answer_terms": ["queen", "mating", "spermatheca"],
+    "min_answer_term_coverage": 0.34
+  },
+  {
+    "id": "agent-pollen-role",
+    "tenant_id": "retrieval-eval-20260324",
+    "query": "How do bees use pollen and why is it important to the colony?",
+    "expected_question_type": "procedure",
+    "expected_abstained": false,
+    "expected_document_filenames": ["DadantFirstLessonsInBeekeeping.pdf"],
+    "expected_citation_kinds": ["chunk"],
+    "expected_answer_terms": ["pollen", "colony", "bees"],
+    "min_answer_term_coverage": 0.34
+  },
+  {
+    "id": "agent-straw-skeps",
+    "tenant_id": "retrieval-eval-20260324",
+    "query": "What are the advantages and limitations of straw skeps?",
+    "expected_question_type": "comparison",
+    "expected_abstained": false,
+    "expected_document_filenames": ["cu31924066723143.pdf"],
+    "expected_citation_kinds": ["chunk"],
+    "expected_answer_terms": ["straw", "skep", "hive"],
+    "min_answer_term_coverage": 0.34
+  },
+  {
+    "id": "agent-visual-scan",
+    "tenant_id": "retrieval-eval-20260324",
+    "query": "Describe the visual or scanned content available in this sample and cite the image evidence.",
+    "expected_question_type": "visual_lookup",
+    "expected_abstained": false,
+    "scope_document_filenames": ["honeybeeitsnatur00cowa_bw.pdf"],
+    "expected_document_filenames": ["honeybeeitsnatur00cowa_bw.pdf"],
+    "expected_citation_kinds": ["asset"],
+    "expected_answer_terms": ["library", "seal", "museum"],
+    "min_answer_term_coverage": 0.2
+  }
+]

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Orchestration"
+  short_description: "Coordinate multi-step Codex work"
+  default_prompt: "Use $codex-orchestration to break down a larger task, coordinate focused workers, and synthesize the result."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,12 @@
+.git
+.pytest_cache
+__pycache__
+*.pyc
+.venv
+.deps
+.tmp
+data/chroma
+tests/.tmp
+skill.zip
+skill (1).zip
+skill (2).zip

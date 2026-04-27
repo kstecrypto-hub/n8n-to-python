@@ -1,0 +1,42 @@
+[project]
+name = "bee_ingestion_pipeline"
+version = "0.1.0"
+description = "Rebuilt ingestion pipeline for document parsing, chunking, vector indexing, and KG extraction."
+requires-python = ">=3.11"
+dependencies = [
+  "chromadb>=1.0.12",
+  "cryptography>=44.0.0",
+  "fastapi>=0.115.0",
+  "httpx>=0.28.0",
+  "psycopg[binary]>=3.2.0",
+  "pydantic>=2.10.0",
+  "pydantic-settings>=2.6.0",
+  "pymupdf>=1.26.0",
+  "pypdf>=5.4.0",
+  "python-multipart>=0.0.20",
+  "uvicorn>=0.34.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.25.0",
+]
+
+[project.scripts]
+bee-ingest-worker = "src.bee_ingestion.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src", "src.*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

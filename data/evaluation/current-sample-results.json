@@ -1,0 +1,246 @@
+{
+  "tenant_id": "sample-corpus",
+  "top_k": 3,
+  "results": [
+    {
+      "id": "queen-mating",
+      "query": "How does the queen mate and what happens after mating?",
+      "expected_focus": "queen biology and reproduction",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0003:202190e31b08c31b",
+          "distance": 0.8067062,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 18,
+          "page_end": 18,
+          "preview": "THE QUEEN\n\n\u00a7 5. If for some reason the queen is unable to mate within the\n\nfirst three weeks of her life, she loses the desire to mate, but is nevertheless able to lay eggs that will hatch, as will be shown further (9).\n\nThese\n\nproduce only drones. In about two days after mating,"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0013:8b68ea7b7c51da6e",
+          "distance": 0.9074436,
+          "section_title": "That",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 21,
+          "page_end": 21,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large num"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0002:916eacc8ea915305",
+          "distance": 0.9123223,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 17,
+          "page_end": 17,
+          "preview": "life, though- she often lives three or four Pig. 1\u2014The Queenbee years (30). On her return to the hive, after mating, if she has been fecundated, the male organs may be seen attached to her abdomen."
+        }
+      ]
+    },
+    {
+      "id": "varroa-monitoring",
+      "query": "What should a beekeeper watch when monitoring for varroa in a colony?",
+      "expected_focus": "disease, parasites, monitoring",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "3ef32a56-f35f-490e-b0bb-a9ce3a92dde8:c0012:bb9818ac8c475450",
+          "distance": 1.1537523,
+          "section_title": "A Manual Of Bee-Keeping",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 16,
+          "page_end": 16,
+          "preview": "A Manual Of Bee-Keeping\n\nseasons the last, may be absent ; the second never. The Queen is the only perfect female.\n\n\u2018\u00ab First of the throng and foremost of the whole, * One stands confest the Sovereign and the soul.\u201d\u2014VIRGIL.\n\nIf the colony has not swarmed, the mother of every othe"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0001:41439f9cfd6ccbbd",
+          "distance": 1.1966374,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 17,
+          "page_end": 17,
+          "preview": "The Queen\n\n\u00a7 3. The mother-bee, as she is often called, is the only perfect female in the colony and is the true mother of it. Her only duty is to lay the eggs for the propogation of the species. She is a little larger than the worker but not so large as the drone. Her body is lo"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0013:8b68ea7b7c51da6e",
+          "distance": 1.2005391,
+          "section_title": "That",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 21,
+          "page_end": 21,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large num"
+        }
+      ]
+    },
+    {
+      "id": "straw-skeps",
+      "query": "What are the advantages and limitations of straw skeps?",
+      "expected_focus": "hive equipment and management tradeoffs",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "3ef32a56-f35f-490e-b0bb-a9ce3a92dde8:c0015:c7c1806cb8942faf",
+          "distance": 1.323257,
+          "section_title": "Natural History Of The Honey Bee. 5",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 17,
+          "page_end": 17,
+          "preview": "The Bees now seal over the cell with a cover made of wax and Bee-bread, whose colour matches that of the surrounding old combs. This cover is convex, that of the Drone cells more so than that of the Workers, and minute holes in it admit air to the larva. Like most other insects, "
+        },
+        {
+          "rank": 2,
+          "chunk_id": "3ef32a56-f35f-490e-b0bb-a9ce3a92dde8:c0005:023beb5223e05ea1",
+          "distance": 1.3341315,
+          "section_title": "A Manual Of Bee-Keeping",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 14,
+          "page_end": 14,
+          "preview": "A Manual Of Bee-Keeping\n\nupon and studied the Bee, the wonders it unfolds are not yet exhausted.\n\nThe patience and sagacity of the naturalist have had an ample field for exercise in the study of the structure, physiology, and domestic economy of Bees; their preservation and incre"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "3ef32a56-f35f-490e-b0bb-a9ce3a92dde8:c0016:64a9cc74568f73f9",
+          "distance": 1.4350638,
+          "section_title": "Natural History Of The Honey Bee. 5",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 17,
+          "page_end": 17,
+          "preview": "or semi-transparent film, resembling gold-beater\u2019s skin, but without a wrinkle. This film is never removed by the bees, all other larve bred in the cell making new films, which remain until the capacity of the cell is sensibly reduced. These films take and retain the hexagon form"
+        }
+      ]
+    },
+    {
+      "id": "supers-management",
+      "query": "How should supers be supplied and managed in the hive?",
+      "expected_focus": "supers and honey management",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0005:e0c76686adcc0929",
+          "distance": 1.017624,
+          "section_title": "This",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 19,
+          "page_end": 19,
+          "preview": "This\n\nthey do by 'building queencells\n\n(Pig. 5.) (34) which they supply with eggs from worker-cells. The bees also rear queens when preparing to swarm (96); the first queen hatched destroys the others and the bees usually help her to do it unless they wish to swarm (98) again.\n\nP"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0003:202190e31b08c31b",
+          "distance": 1.028646,
+          "section_title": "The Queen",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 18,
+          "page_end": 18,
+          "preview": "THE QUEEN\n\n\u00a7 5. If for some reason the queen is unable to mate within the\n\nfirst three weeks of her life, she loses the desire to mate, but is nevertheless able to lay eggs that will hatch, as will be shown further (9).\n\nThese\n\nproduce only drones. In about two days after mating,"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "3ef32a56-f35f-490e-b0bb-a9ce3a92dde8:c0012:bb9818ac8c475450",
+          "distance": 1.0674198,
+          "section_title": "A Manual Of Bee-Keeping",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 16,
+          "page_end": 16,
+          "preview": "A Manual Of Bee-Keeping\n\nseasons the last, may be absent ; the second never. The Queen is the only perfect female.\n\n\u2018\u00ab First of the throng and foremost of the whole, * One stands confest the Sovereign and the soul.\u201d\u2014VIRGIL.\n\nIf the colony has not swarmed, the mother of every othe"
+        }
+      ]
+    },
+    {
+      "id": "pollen-use",
+      "query": "How do bees use pollen and why is it important to the colony?",
+      "expected_focus": "pollen function and colony needs",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0005:e0c76686adcc0929",
+          "distance": 1.1770331,
+          "section_title": "This",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 19,
+          "page_end": 19,
+          "preview": "This\n\nthey do by 'building queencells\n\n(Pig. 5.) (34) which they supply with eggs from worker-cells. The bees also rear queens when preparing to swarm (96); the first queen hatched destroys the others and the bees usually help her to do it unless they wish to swarm (98) again.\n\nP"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0013:8b68ea7b7c51da6e",
+          "distance": 1.2223363,
+          "section_title": "That",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 21,
+          "page_end": 21,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large num"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "3ef32a56-f35f-490e-b0bb-a9ce3a92dde8:c0015:c7c1806cb8942faf",
+          "distance": 1.2336731,
+          "section_title": "Natural History Of The Honey Bee. 5",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 17,
+          "page_end": 17,
+          "preview": "The Bees now seal over the cell with a cover made of wax and Bee-bread, whose colour matches that of the surrounding old combs. This cover is convex, that of the Drone cells more so than that of the Workers, and minute holes in it admit air to the larva. Like most other insects, "
+        }
+      ]
+    },
+    {
+      "id": "winter-preparation",
+      "query": "How should colonies be prepared for winter or poor forage periods?",
+      "expected_focus": "seasonal management and feeding",
+      "matches": [
+        {
+          "rank": 1,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0013:8b68ea7b7c51da6e",
+          "distance": 1.3340895,
+          "section_title": "That",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 21,
+          "page_end": 21,
+          "preview": "That\n\nis why hundreds and often thousands of drones are reared in each colony during the breeding and swarming season. In domestication, when dozens and sometimes hundreds of colonies are kept in an apiary, the choice colonies alone should be permitted to rear drones in large num"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0009:2eed2aae69287698",
+          "distance": 1.3574927,
+          "section_title": "Egg Laying",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 20,
+          "page_end": 20,
+          "preview": "\u00a7 10. The queen usually lays from February to October, but very early in the spring she lays sparingly. When fruit and flowers bloom, and the bees are getting honey and pollen, she lays most rapidly."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "f13cfb25-3906-4607-a6dd-6a2d08b8ac83:c0004:392a51293ddf6af9",
+          "distance": 1.3592757,
+          "section_title": "Ovaries",
+          "chunk_role": "body",
+          "document_class": "book",
+          "page_start": 19,
+          "page_end": 19,
+          "preview": "Ovaries\n\nlimited space often causes the queen to desert the breeding apartment and induce swarming.\n\n\u00a7 6. Instinct teaches the workers the necessity of having a queen that is prolific, and should she become barren from any cause, or be lost or even decrease in her fer-\n\ntility (1"
+        }
+      ]
+    }
+  ]
+}

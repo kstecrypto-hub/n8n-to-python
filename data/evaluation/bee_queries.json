@@ -1,0 +1,32 @@
+[
+  {
+    "id": "queen-mating",
+    "query": "How does the queen mate and what happens after mating?",
+    "expected_focus": "queen biology and reproduction"
+  },
+  {
+    "id": "varroa-monitoring",
+    "query": "What should a beekeeper watch when monitoring for varroa in a colony?",
+    "expected_focus": "disease, parasites, monitoring"
+  },
+  {
+    "id": "straw-skeps",
+    "query": "What are the advantages and limitations of straw skeps?",
+    "expected_focus": "hive equipment and management tradeoffs"
+  },
+  {
+    "id": "supers-management",
+    "query": "How should supers be supplied and managed in the hive?",
+    "expected_focus": "supers and honey management"
+  },
+  {
+    "id": "pollen-use",
+    "query": "How do bees use pollen and why is it important to the colony?",
+    "expected_focus": "pollen function and colony needs"
+  },
+  {
+    "id": "winter-preparation",
+    "query": "How should colonies be prepared for winter or poor forage periods?",
+    "expected_focus": "seasonal management and feeding"
+  }
+]
