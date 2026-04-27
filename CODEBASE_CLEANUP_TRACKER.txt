@@ -127,7 +127,7 @@ Remaining failing areas after the cleanup-specific regression fix:
   - existing transition expectation for `registered -> content_available` does not match current pipeline rules
 
 Post-cleanup remediation
-Status: IN PROGRESS
+Status: COMPLETED
 Completed batches:
 - Batch 1:
   - Added explicit `_LazyProxy` pass-through methods in `src/bee_ingestion/api.py` for agent review/metrics/session helpers so proxy-backed tests and light stubs can monkeypatch the current API surface safely.
@@ -138,3 +138,185 @@ Completed batches:
 - Batch 2:
   - Restored the direct `chunks_validated -> indexed` transition in `src/bee_ingestion/pipeline.py` for compatibility with the current pipeline test path.
   - Updated `src/bee_ingestion/api.py` replay handling to omit `workspace_kind` unless it is actually present in stored request scope, keeping replay compatible with narrower test doubles for `agent_service.chat`.
+- Batch 3:
+  - Updated `src/bee_ingestion/api.py` replay handling to skip current-snapshot lookup entirely when the stored run has no `corpus_snapshot_id`, avoiding unnecessary coupling to repository methods during replay and keeping stub-backed tests deterministic.
+- Batch 4:
+  - Expanded the `_LazyProxy` compatibility surface in `src/bee_ingestion/api.py` for admin DB methods (`list_admin_relations`, `list_admin_relation_rows`, `insert_admin_relation_row`, `update_admin_relation_row`, `delete_admin_relation_row`, `execute_admin_sql`) so API tests can monkeypatch those seams without forcing `Repository()` construction.
+  - This keeps the fix on the API proxy boundary instead of widening the repository constructor side effects that currently perform schema-compatibility mutation.
+
+Final verification after remediation:
+- `tests/test_api.py` -> `36 passed`
+- Late suite with local overrides for Postgres/Auth Postgres, ontology path, and Chroma host:
+  - `tests/test_api.py tests/test_agent.py tests/test_service.py tests/test_repository.py tests/test_public_auth.py tests/test_kg.py tests/test_pipeline.py`
+  - Result: `120 passed`
+
+Architecture note carried forward:
+- The remaining structural smell is still real: `Repository()` performs schema-compatibility mutation in its constructor, which is why proxy-triggered instantiation was risky in the first place.
+- That is now contained for the cleanup/remediation pass, but it should be addressed later as an explicit architecture task, not folded into low-risk cleanup work.
+
+Architecture Ownership Refactor Pass
+Status: COMPLETED
+Date: 2026-04-24
+Scope:
+- Continue the bounded-ownership refactor across admin HTTP, bounded storage, offline pipeline stages, frontend admin UI, and architecture-boundary tests.
+- Keep `AGENT_ARCHITECTURE_CANONICAL_PLAN.txt` as the stable architecture document and record this implementation pass here instead of appending more operational log noise there.
+
+Phase 1 inventory conclusions applied in this pass:
+- `api.py` was still acting as the admin/operator application kernel.
+- `repository.py` still owned admin inspection plus session/profile/message/query persistence.
+- `service.py` still owned source-prep, multimodal, and KG stage bodies inline.
+- `AdminPage.tsx` was still too heavy unless the extracted hook/section split on disk was validated and retained.
+- `request_auth.py` remained cohesive enough to leave alone for this pass.
+
+Responsibilities moved:
+- Admin/operator HTTP route bodies moved out of `src/bee_ingestion/api.py` into `src/bee_ingestion/http_api/routes/admin/`.
+- Fat admin route workflows moved behind explicit admin services in `src/bee_ingestion/admin/`.
+- Repository-backed admin inspection behavior now has an explicit bounded module in `src/bee_ingestion/storage/admin_inspection_store.py`.
+- Session/profile/message/memory/query-trace/feedback persistence is now explicitly split across:
+  - `src/bee_ingestion/storage/agent_session_store.py`
+  - `src/bee_ingestion/storage/agent_profile_store.py`
+  - `src/bee_ingestion/storage/agent_message_store.py`
+  - `src/bee_ingestion/storage/memory_store.py`
+  - `src/bee_ingestion/storage/agent_trace_store.py`
+  - `src/bee_ingestion/storage/agent_feedback_store.py`
+- `repository.py` now uses compatibility-wrapper delegation for those bounded responsibilities instead of remaining the primary owner of the implementations.
+- Offline stage ownership moved further out of `service.py` into:
+  - `src/bee_ingestion/offline_pipeline/stages/source_prep.py`
+  - `src/bee_ingestion/offline_pipeline/stages/extract_multimodal.py`
+  - `src/bee_ingestion/offline_pipeline/stages/build_kg.py`
+- `service.py` remains a worker-facing facade/orchestrator for these stage calls.
+- Frontend admin ownership stays split through:
+  - `frontend/src/features/admin/hooks/useAdminConsoleState.ts`
+  - `frontend/src/features/admin/sections/*`
+  - `frontend/src/features/admin/AdminPage.tsx` as the shell-only page
+
+Why each new module exists:
+- `admin/*.py`: application-service ownership for admin workflows that are more than HTTP translation.
+- `http_api/routes/admin/*.py`: route ownership by concern; HTTP translation only.
+- `storage/agent_session_store.py`: session lifecycle, leasing, ownership, and token persistence only.
+- `storage/agent_profile_store.py`: profile persistence, profile lookup, and profile token persistence only.
+- `storage/agent_message_store.py`: transcript/message persistence only.
+- `storage/memory_store.py`: typed session-memory persistence only.
+- `storage/agent_trace_store.py`: query-run traces, replayable run detail, router/pattern state, and embedding cache persistence only.
+- `storage/agent_feedback_store.py`: answer-review and feedback persistence only.
+- `offline_pipeline/stages/source_prep.py`: source normalization/metrics stage only.
+- `offline_pipeline/stages/extract_multimodal.py`: multimodal PDF extraction stage only.
+- `offline_pipeline/stages/build_kg.py`: KG extraction/validation stage ownership only.
+- `tests/test_architecture_boundaries.py`: import-boundary guardrails only.
+
+What these modules must not own:
+- admin services must not own raw SQL or route declarations.
+- admin route modules must not own business logic, vector calls, or direct repository internals.
+- storage modules must not import `http_api/*`, frontend code, or prompt modules.
+- offline pipeline stages must not import `http_api/*` or chat-runtime prompt behavior.
+- `PromptBuilder` and `AnswerVerifier` stay separate from storage/retrieval ownership.
+
+Compatibility wrappers and shims:
+- `src/bee_ingestion/api.py` remains a compatibility entrypoint that creates/exports the app and includes routers.
+- `src/bee_ingestion/repository.py` remains a compatibility facade for existing callers, but delegated methods now forward to bounded store modules.
+- Existing proxy surfaces in `src/bee_ingestion/http_api/dependencies.py` remain the monkeypatch seams for route tests.
+- Service tests were updated to patch the new `offline_pipeline.stages.build_kg` seam instead of the old `service.py` implementation seam.
+
+Tests added or updated:
+- Updated `tests/test_api.py` for the extracted corpus/admin seams and lazy-service injection.
+- Updated `tests/test_service.py` for the extracted KG stage seam.
+- Updated `tests/test_offline_pipeline.py` with coverage for:
+  - source-prep stage
+  - multimodal extraction stage
+  - KG build-stage iteration/failure tracking
+- Added `tests/test_architecture_boundaries.py` to enforce:
+  - `http_api/routes/*` do not import storage or `repository.py` directly
+  - `prompt_builder.py` does not import storage/repository/vector/LLM modules
+  - `verifier.py` does not import `prompt_builder`
+  - `offline_pipeline/*` does not import `http_api/*`
+  - `storage/*` does not import `http_api/*` or frontend code
+  - `frontend/src/features/admin/AdminPage.tsx` does not import low-level API transport modules directly
+
+Verification:
+- `frontend`: `npm run build` -> passed
+- Focused backend:
+  - `tests/test_api.py tests/test_repository.py` -> passed
+  - `tests/test_offline_pipeline.py tests/test_architecture_boundaries.py` -> passed
+- Late suite with local overrides:
+  - `POSTGRES_DSN=postgresql://bee:bee@127.0.0.1:35432/bee_ingestion`
+  - `AUTH_POSTGRES_DSN=postgresql://bee_auth:bee_auth@127.0.0.1:35433/bee_identity`
+  - `CHROMA_HOST=127.0.0.1`
+  - `KG_ONTOLOGY_PATH=E:\n8n to python\data\beecore.ttl`
+  - `tests/test_api.py tests/test_agent.py tests/test_service.py tests/test_repository.py tests/test_public_auth.py tests/test_kg.py tests/test_pipeline.py tests/test_offline_pipeline.py tests/test_architecture_boundaries.py`
+  - Result: `141 passed`
+
+Remaining hotspots after this pass:
+- `src/bee_ingestion/repository.py` still owns document/chunk/KG/job persistence in one module and is not yet reduced to a narrow facade.
+- `src/bee_ingestion/service.py` still owns replay, repair, reindex, and some maintenance workflow bodies inline.
+- `frontend/src/features/admin/AdminExtendedSections.tsx` is still larger than ideal and is the next frontend admin ownership hotspot.
+- `AGENT_ARCHITECTURE_CANONICAL_PLAN.txt` still contains historical implementation logging from earlier passes; this pass does not add to that drift, but a later docs cleanup should split stable architecture from historical notes more aggressively if desired.
+
+Architecture Stabilization Audit
+Status: COMPLETED
+Date: 2026-04-27
+Scope:
+- Final architecture-stabilization audit of the bounded-ownership refactor.
+- No broad refactor.
+- Only narrow fixes to documentation placement and architecture-boundary tests.
+
+Audit fixes applied:
+- Rewrote `AGENT_ARCHITECTURE_CANONICAL_PLAN.txt` into a stable architecture-only document with no implementation log entries.
+- Kept pass history in this tracker instead of the canonical plan.
+- Strengthened `tests/test_architecture_boundaries.py` to additionally enforce:
+  - `http_api/routes/*` must not import `src.bee_ingestion.chroma_store`
+  - `offline_pipeline/*` must not import `agent_runtime.prompt_builder`
+  - `storage/*` must not import prompt/verifier modules
+  - the extracted persistence surface in `repository.py` stays constrained to known compatibility wrappers or explicitly allowed remaining owners
+
+Verification in the current environment:
+- `tests/test_architecture_boundaries.py` -> `7 passed`
+- `tests/test_agent.py` -> `49 passed`
+- `tests/test_repository.py` -> `15 passed`
+- `tests/test_service.py` -> `15 passed`
+- `frontend`: `npm run build` -> passed
+
+Environment blocker:
+- Full DB-backed backend verification is currently unavailable on this machine because:
+  - `127.0.0.1:35432` and `127.0.0.1:35433` are refusing connections
+  - `docker ps` fails because the Docker Desktop engine is not running
+- This blocks `tests/test_api.py`, `tests/test_public_auth.py`, and the full late suite from completing here.
+
+Audit verdict:
+- The bounded-ownership refactor is structurally intact.
+- The current merge blocker is environment availability for DB-backed verification, not a newly introduced architecture violation from this audit pass.
+
+Blocker Closure Pass
+Status: DONE
+Date: 2026-04-27
+Scope:
+- Closed the exact blockers from the previous `NOT DONE: code blockers remain` result.
+- No broad architecture exploration or unrelated feature work.
+
+Responsibilities moved:
+- Listed offline maintenance workflows in `src/bee_ingestion/service.py` now delegate to explicit stage modules under `src/bee_ingestion/offline_pipeline/stages/`.
+- Publish/snapshot test fakes now implement `create_pending_corpus_snapshot` and `activate_corpus_snapshot`.
+- `tests/test_service.py` no longer depends on the unavailable container-only ontology path because `load_ontology()` falls back to the repo-local ontology file when the configured path is absent.
+- `frontend/src/features/admin/AdminExtendedSections.tsx` is now a small dispatcher. Section behavior moved into feature-owned admin section modules.
+
+Completion safeguards:
+- Added `.gitignore` env-file coverage.
+- Removed `.env` from git tracking while leaving the local file in place.
+- Added `scripts/scan_hardcoded_secrets.py`.
+- Added `scripts/verify_architecture_completion.py`.
+- Added AGENTS.md completion discipline rules for gated tasks.
+- Added architecture-boundary coverage for the completion script and composition-only `AdminExtendedSections.tsx`.
+
+Verification:
+- `docker ps` -> Docker available; app Postgres, auth Postgres, Chroma, and API containers running.
+- Focused backend with local dependency env overrides -> `144 passed`.
+- Full backend with local dependency env overrides -> `168 passed`.
+- `frontend`: `npm run build` -> passed.
+- `scripts/verify_architecture_completion.py` -> passed.
+- `scripts/scan_hardcoded_secrets.py --list-tracked-env` -> passed.
+- `git ls-files | rg env` equivalent -> only `.env.example` remains tracked.
+
+Compatibility shims still present:
+- `src/bee_ingestion/repository.py` compatibility wrappers remain for old call sites. Removal condition: callers move to bounded stores/services.
+- `src/bee_ingestion/service.py` public compatibility methods remain for worker/API callers. Removal condition: callers use offline stage/pipeline entrypoints directly.
+- `src/bee_ingestion/http_api/dependencies.py` lazy proxies remain for dependency wiring and test seams. Removal condition: app composition can move to explicit dependency injection without breaking tests/imports.
+- `src/bee_ingestion/offline_pipeline/stages/legacy_ingest.py` remains for the transitional ingestion pipeline. Removal condition: the full ingestion flow is represented as named stages.

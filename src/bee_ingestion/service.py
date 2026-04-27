@@ -11,7 +11,7 @@ This module stitches the pipeline stages together:
 
 from __future__ import annotations
 
-from dataclasses import asdict
+import asyncio
 from datetime import UTC, datetime
 from hashlib import sha256
 import logging
@@ -22,23 +22,41 @@ import threading
 from typing import Any, Callable
 from uuid import uuid4
 
-from src.bee_ingestion.chunking import build_chunks, build_extraction_metrics, normalize_text, parse_text, sanitize_text
+from src.bee_ingestion.chunking import normalize_text, sanitize_text
 from src.bee_ingestion.chroma_store import ChromaStore
 from src.bee_ingestion.embedding import Embedder
 from src.bee_ingestion.kg import (
-    KGExtractionError,
-    canonicalize_extraction,
     chunk_ontology_tags,
-    extract_candidates_with_meta,
     load_ontology,
-    prune_extraction,
-    validate_extraction,
 )
 from src.bee_ingestion.models import Chunk, ChunkAssetLink, KGExtractionResult, PageAsset, SourceDocument
-from src.bee_ingestion.multimodal import MultimodalPDFPayload, extract_pdf_multimodal_payload
+from src.bee_ingestion.multimodal import MultimodalPDFPayload
+from src.bee_ingestion.offline_pipeline.context import OfflinePipelineContext
+from src.bee_ingestion.offline_pipeline.contracts import OfflinePipelineCommand
+from src.bee_ingestion.offline_pipeline.runner import OfflinePipelineRunner
+from src.bee_ingestion.offline_pipeline.stages import (
+    LegacyIngestStage,
+    extract_multimodal_payload,
+    prepare_source_document,
+    run_build_kg_stage,
+    run_chunk_documents_stage,
+    run_kg_pipeline,
+    run_publish_corpus_stage,
+)
+from src.bee_ingestion.offline_pipeline.stages import delete_document as delete_document_stage
+from src.bee_ingestion.offline_pipeline.stages import rebuild_document as rebuild_document_stage
+from src.bee_ingestion.offline_pipeline.stages import reindex_document as reindex_document_stage
+from src.bee_ingestion.offline_pipeline.stages import repair_document as repair_document_stage
+from src.bee_ingestion.offline_pipeline.stages import replay_quarantined_kg as replay_quarantined_kg_stage
+from src.bee_ingestion.offline_pipeline.stages import reprocess_kg as reprocess_kg_stage
+from src.bee_ingestion.offline_pipeline.stages import reset_ingestion_data as reset_ingestion_data_stage
+from src.bee_ingestion.offline_pipeline.stages import reset_pipeline_data as reset_pipeline_data_stage
+from src.bee_ingestion.offline_pipeline.stages import resume_ingest as resume_ingest_stage
+from src.bee_ingestion.offline_pipeline.stages import revalidate_document as revalidate_document_stage
 from src.bee_ingestion.repository import Repository
 from src.bee_ingestion.reviewer import ChunkReviewError, review_chunk_with_meta
 from src.bee_ingestion.settings import settings, workspace_root
+from src.bee_ingestion.storage.bootstrap import ensure_app_storage_compatibility
 from src.bee_ingestion.validation import validate_chunk
 
 _ASSET_LINK_STOPWORDS = {
@@ -57,6 +75,8 @@ class IngestionService:
         store: ChromaStore | None = None,
         progress_callback: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
+        if repository is None:
+            ensure_app_storage_compatibility()
         self.repository = repository or Repository()
         self.store = store or ChromaStore()
         self.embedder = Embedder()
@@ -549,523 +569,171 @@ class IngestionService:
                 delete_document_on_failure=False,
             )
 
+    def enqueue_text(self, source: SourceDocument) -> dict:
+        source = self._prepare_source(source)
+        if source.source_type == "pdf":
+            self._resolve_replayable_pdf_path(source)
+        with self.repository.advisory_lock("ingest-source", source.tenant_id, source.source_type, source.content_hash, source.filename):
+            existing_document_id = self.repository.find_existing_document(source)
+            document_id, source_id = self.repository.register_document(source)
+            job_id = self._create_ingestion_job_for_source(document_id, source)
+            payload = {
+                "job_id": job_id,
+                "document_id": document_id,
+                "source_id": source_id,
+                "status": "registered",
+                "queued": True,
+                "source_type": source.source_type,
+                "filename": source.filename,
+            }
+            if existing_document_id:
+                payload["replacement_document_id"] = document_id
+                payload["superseded_document_id"] = existing_document_id
+            return payload
+
+    def enqueue_maintenance_job(
+        self,
+        *,
+        operation: str,
+        document_id: str | None = None,
+        parameters: dict[str, Any] | None = None,
+    ) -> dict:
+        operation_name = str(operation or "").strip()
+        if not operation_name:
+            raise ValueError("Maintenance operation is required")
+        job_id = None
+        if document_id:
+            job_id = self.repository.create_job(
+                document_id=document_id,
+                extractor_version=settings.extractor_version,
+                normalizer_version=settings.normalizer_version,
+                parser_version=settings.extractor_version,
+                chunker_version=settings.chunker_version,
+                validator_version=settings.validator_version,
+                embedding_version=settings.embedding_model,
+                kg_version=f"{settings.kg_extraction_provider}:{settings.kg_model}:{settings.kg_prompt_version}",
+            )
+            self.repository.record_stage(
+                job_id=job_id,
+                document_id=document_id,
+                stage_name=f"maintenance:{operation_name}",
+                job_status="registered",
+                stage_outcome="registered",
+                metrics={"operation": operation_name, "parameters": dict(parameters or {})},
+                worker_version=settings.worker_version,
+                input_version="maintenance",
+            )
+        return {
+            "status": "registered",
+            "operation": operation_name,
+            "job_id": job_id,
+            "document_id": document_id,
+            "parameters": dict(parameters or {}),
+            "execution": "offline_worker",
+        }
+
+    def run_registered_job(self, job_id: str) -> dict:
+        job = self.repository.get_job(job_id)
+        if job is None:
+            raise ValueError("Ingestion job not found")
+        document_id = str(job.get("document_id") or "").strip()
+        if not document_id:
+            raise ValueError("Ingestion job is missing a document_id")
+        source_row = self.repository.get_latest_document_source(document_id)
+        if source_row is None:
+            raise ValueError("Document source not found")
+        command = OfflinePipelineCommand(
+            job_id=job_id,
+            document_id=document_id,
+            source_id=str(source_row.get("source_id") or ""),
+            tenant_id=str(source_row.get("tenant_id") or "shared"),
+            source_type=str(source_row.get("source_type") or ""),
+            delete_document_on_failure=bool(str(job.get("status") or "").strip().lower() != "registered"),
+            metadata={
+                "filename": str(source_row.get("filename") or ""),
+                "document_class": str(source_row.get("document_class") or ""),
+            },
+        )
+        context = OfflinePipelineContext(
+            repository=self.repository,
+            service=self,
+            worker_id=self.worker_id,
+            input_version=self._build_input_version(str(source_row.get("parser_version") or "v1")),
+            worker_version=settings.worker_version,
+        )
+        runner = OfflinePipelineRunner([LegacyIngestStage()])
+        state = asyncio.run(runner.run(context=context, command=command))
+        if state.result_payload is not None:
+            return state.result_payload
+        if state.errors:
+            raise RuntimeError(state.errors[-1])
+        return {
+            "job_id": job_id,
+            "document_id": document_id,
+            "status": "processing" if not state.finished_stage_names else "completed",
+            "retrieval_visible": state.retrieval_visible,
+        }
+
+    def _create_ingestion_job_for_source(self, document_id: str, source: SourceDocument) -> str:
+        return self.repository.create_job(
+            document_id=document_id,
+            extractor_version=settings.extractor_version,
+            normalizer_version=settings.normalizer_version,
+            parser_version=source.parser_version,
+            chunker_version=settings.chunker_version,
+            validator_version=settings.validator_version,
+            embedding_version=settings.embedding_model,
+            kg_version=f"{settings.kg_extraction_provider}:{settings.kg_model}:{settings.kg_prompt_version}",
+        )
+
+    def _source_from_source_row(self, source_row: dict[str, Any]) -> SourceDocument:
+        source = self._prepare_source(
+            SourceDocument(
+                tenant_id=str(source_row["tenant_id"]),
+                source_type=str(source_row["source_type"]),
+                filename=str(source_row["filename"]),
+                raw_text=str(source_row["raw_text"]),
+                normalized_text=str(source_row.get("normalized_text") or ""),
+                extraction_metrics=dict(source_row.get("extraction_metrics_json") or {}),
+                metadata=dict(source_row.get("metadata_json") or {}),
+                document_class=str(source_row["document_class"]),
+                parser_version=str(source_row.get("parser_version") or "v1"),
+                ocr_engine=source_row.get("ocr_engine"),
+                ocr_model=source_row.get("ocr_model"),
+                content_hash_value=str(source_row.get("content_hash") or ""),
+            )
+        )
+        if source.source_type == "pdf":
+            self._resolve_replayable_pdf_path(source)
+        return source
+
+    def _execute_legacy_ingest_command(self, command: OfflinePipelineCommand) -> dict:
+        source_row = self.repository.get_latest_document_source(command.document_id)
+        if source_row is None:
+            raise ValueError("Document source not found")
+        source = self._source_from_source_row(source_row)
+        return self._process_registered_document(
+            document_id=command.document_id,
+            source_id=command.source_id,
+            source=source,
+            delete_document_on_failure=command.delete_document_on_failure,
+            job_id=command.job_id,
+        )
+
     def rebuild_document(self, document_id: str) -> dict:
-        with self.repository.advisory_lock("document-mutate", document_id):
-            source_row = self.repository.get_latest_document_source(document_id)
-            if source_row is None:
-                raise ValueError("Document source not found")
-
-            source = self._prepare_source(
-                SourceDocument(
-                    tenant_id=str(source_row["tenant_id"]),
-                    source_type=str(source_row["source_type"]),
-                    filename=str(source_row["filename"]),
-                    raw_text=str(source_row["raw_text"]),
-                    normalized_text=str(source_row.get("normalized_text") or ""),
-                    extraction_metrics=dict(source_row.get("extraction_metrics_json") or {}),
-                    metadata=dict(source_row.get("metadata_json") or {}),
-                    document_class=str(source_row["document_class"]),
-                    parser_version=str(source_row.get("parser_version") or "v1"),
-                    ocr_engine=source_row.get("ocr_engine"),
-                    ocr_model=source_row.get("ocr_model"),
-                    content_hash_value=str(source_row.get("content_hash") or ""),
-                )
-            )
-
-            if source.source_type == "pdf":
-                self._resolve_replayable_pdf_path(source)
-
-            replacement_document_id, source_id = self.repository.register_document(source)
-            result = self._process_registered_document(
-                document_id=replacement_document_id,
-                source_id=source_id,
-                source=source,
-            )
-            self.store.delete_document(document_id)
-            self._delete_page_asset_files(document_id)
-            self.repository.delete_document(document_id)
-            result["rebuilt_document_id"] = replacement_document_id
-            result["superseded_document_id"] = document_id
-            return result
+        return rebuild_document_stage.rebuild_document(self, document_id)
 
     def repair_document(self, document_id: str, rerun_kg: bool = True) -> dict:
-        return self.revalidate_document(document_id=document_id, rerun_kg=rerun_kg)
+        return repair_document_stage.repair_document(self, document_id, rerun_kg=rerun_kg)
 
     def resume_document_ingest(self, document_id: str) -> dict:
-        with self.repository.advisory_lock("document-mutate", document_id):
-            source_row = self.repository.get_latest_document_source(document_id)
-            if source_row is None:
-                raise ValueError("Document source not found")
-            job = self.repository.get_latest_job_for_document(document_id)
-            if job is None:
-                raise ValueError("Ingestion job not found")
-
-            current_status = str(job.get("status") or "").strip().lower()
-            if current_status in {"completed", "review"}:
-                detail = self.repository.get_document_detail(document_id)
-                document = dict((detail or {}).get("document") or {})
-                assets = self._list_all_page_assets(document_id)
-                return {
-                    "job_id": str(job["job_id"]),
-                    "document_id": document_id,
-                    "source_id": str(source_row["source_id"]),
-                    "blocks": 0,
-                    "chunks": int(document.get("total_chunks") or 0),
-                    "accepted_chunks": int(document.get("accepted_chunks") or 0),
-                    "pages": len(self.repository.list_document_pages(document_id=document_id, limit=5000)),
-                    "page_assets": len(assets),
-                    "indexed_assets": len([asset for asset in assets if self._is_indexable_asset(asset)]),
-                    "kg_failures": [],
-                    "resumed": True,
-                    "resume_from_status": current_status,
-                }
-            if current_status not in {"chunks_validated", "kg_validated", "indexed"}:
-                raise ValueError(f"Resume is not supported from job status '{current_status}'")
-
-            source = self._prepare_source(
-                SourceDocument(
-                    tenant_id=str(source_row["tenant_id"]),
-                    source_type=str(source_row["source_type"]),
-                    filename=str(source_row["filename"]),
-                    raw_text=str(source_row["raw_text"]),
-                    normalized_text=str(source_row.get("normalized_text") or ""),
-                    extraction_metrics=dict(source_row.get("extraction_metrics_json") or {}),
-                    metadata=dict(source_row.get("metadata_json") or {}),
-                    document_class=str(source_row["document_class"]),
-                    parser_version=str(source_row.get("parser_version") or "v1"),
-                    ocr_engine=source_row.get("ocr_engine"),
-                    ocr_model=source_row.get("ocr_model"),
-                    content_hash_value=str(source_row.get("content_hash") or ""),
-                )
-            )
-            if source.source_type == "pdf":
-                self._resolve_replayable_pdf_path(source)
-
-            job_id = str(job["job_id"])
-            if not self.repository.claim_job(job_id, self.worker_id, settings.job_lease_seconds, preserve_status=True):
-                raise ValueError("Unable to claim interrupted ingestion job")
-
-            input_version = self._build_input_version(source.parser_version)
-            lease_stop = threading.Event()
-            lease_lost = threading.Event()
-            lease_interval_seconds = max(5, min(settings.job_lease_seconds // 3, 60))
-
-            def renew_lease_loop() -> None:
-                while not lease_stop.wait(lease_interval_seconds):
-                    try:
-                        renewed = self.repository.renew_job_lease(job_id, self.worker_id, settings.job_lease_seconds)
-                    except Exception:
-                        logger.warning("Failed to renew interrupted-ingest job lease for %s", job_id, exc_info=True)
-                        continue
-                    if not renewed:
-                        logger.warning("Lost interrupted-ingest job lease for %s", job_id)
-                        lease_lost.set()
-                        break
-
-            def ensure_lease_active() -> None:
-                if lease_lost.is_set():
-                    raise RuntimeError("Ingestion job lease was lost during processing")
-
-            lease_thread = threading.Thread(target=renew_lease_loop, name=f"ingest-resume-lease-{job_id}", daemon=True)
-            lease_thread.start()
-            running_stage = self.repository.get_running_stage_run(job_id)
-            active_stage_run_id = str(running_stage["stage_run_id"]) if running_stage else None
-            active_stage_name = str(running_stage["stage_name"]) if running_stage else None
-
-            def start_stage(stage_name: str, phase: str, detail: str, metrics: dict[str, Any] | None = None) -> str:
-                nonlocal active_stage_run_id, active_stage_name
-                if active_stage_run_id and active_stage_name == stage_name:
-                    self._emit_progress(
-                        phase=phase,
-                        detail=detail,
-                        document_id=document_id,
-                        job_id=job_id,
-                        metrics=metrics,
-                    )
-                    return active_stage_run_id
-                active_stage_name = stage_name
-                active_stage_run_id = self.repository.start_stage_run(
-                    job_id=job_id,
-                    document_id=document_id,
-                    stage_name=stage_name,
-                    job_status=stage_name,
-                    metrics=metrics,
-                    worker_version=settings.worker_version,
-                    input_version=input_version,
-                    started_at=datetime.now(UTC),
-                )
-                self._emit_progress(
-                    phase=phase,
-                    detail=detail,
-                    document_id=document_id,
-                    job_id=job_id,
-                    metrics=metrics,
-                )
-                return active_stage_run_id
-
-            def finish_stage(
-                phase: str,
-                detail: str,
-                stage_outcome: str,
-                *,
-                metrics: dict[str, Any] | None = None,
-                error_message: str | None = None,
-                terminal_job_status: str | None = None,
-            ) -> None:
-                nonlocal active_stage_run_id, active_stage_name
-                if active_stage_run_id is None:
-                    return
-                self.repository.finish_stage_run(
-                    stage_run_id=active_stage_run_id,
-                    job_id=job_id,
-                    document_id=document_id,
-                    stage_outcome=stage_outcome,
-                    job_status=terminal_job_status,
-                    metrics=metrics,
-                    error_message=error_message,
-                    finished_at=datetime.now(UTC),
-                )
-                self._emit_progress(
-                    phase=phase,
-                    detail=detail,
-                    document_id=document_id,
-                    job_id=job_id,
-                    metrics=metrics,
-                )
-                active_stage_run_id = None
-                active_stage_name = None
-
-            try:
-                accepted_rows = self._list_all_chunk_records_for_kg(document_id)
-                accepted_chunks = [self._chunk_from_record(row) for row in accepted_rows]
-                all_assets = self._list_all_page_assets(document_id)
-                synopsis_metrics = self._refresh_document_synopses(
-                    document_id,
-                    accepted_chunks=accepted_chunks,
-                    source_stage="chunks_validated",
-                )
-                self._emit_progress(
-                    phase="synopsis",
-                    detail=f"Prepared {int(synopsis_metrics['sections'])} section synopses.",
-                    document_id=document_id,
-                    job_id=job_id,
-                    metrics={**synopsis_metrics, "resumed": True},
-                )
-
-                if current_status in {"chunks_validated", "kg_validated"}:
-                    pending_rows = self._list_pending_kg_chunk_records(document_id)
-                    start_stage(
-                        "kg_validated",
-                        "kg",
-                        f"Resuming KG extraction over accepted chunks ({len(accepted_chunks)} total).",
-                        metrics={
-                            "kg_total": len(accepted_chunks),
-                            "kg_completed": max(0, len(accepted_chunks) - len(pending_rows)),
-                            "kg_failures": 0,
-                            "resumed": True,
-                        },
-                    )
-                    processed_before = max(0, len(accepted_chunks) - len(pending_rows))
-                    for index, row in enumerate(pending_rows, start=1):
-                        ensure_lease_active()
-                        chunk = self._chunk_from_record(row)
-                        self._emit_progress(
-                            phase="kg",
-                            detail=f"KG extraction {processed_before + index}/{len(accepted_chunks)}.",
-                            document_id=document_id,
-                            job_id=job_id,
-                            metrics={
-                                "kg_total": len(accepted_chunks),
-                                "kg_completed": processed_before + index - 1,
-                                "kg_failures": self.repository.count_kg_raw_extractions(document_id=document_id, status="review")
-                                + self.repository.count_kg_raw_extractions(document_id=document_id, status="quarantined"),
-                                "resumed": True,
-                            },
-                        )
-                        self._run_kg_pipeline(
-                            document_id,
-                            chunk,
-                            linked_assets=self._load_assets_for_chunk(chunk.chunk_id),
-                            pre_persist_check=ensure_lease_active,
-                        )
-
-                    review_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="review")
-                    skipped_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="skipped")
-                    quarantined_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="quarantined")
-                    validated_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="validated")
-                    kg_failure_count = review_count + quarantined_count
-                    kg_metrics = {
-                        **self._build_graph_quality_metrics(document_id, len(accepted_chunks)),
-                        "resumed": True,
-                    }
-                    finish_stage(
-                        "kg",
-                        "Completed KG extraction.",
-                        "completed" if kg_failure_count == 0 else "review",
-                        metrics=kg_metrics,
-                        error_message=None if kg_failure_count == 0 else str({"review": review_count, "quarantined": quarantined_count}),
-                    )
-                else:
-                    review_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="review")
-                    skipped_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="skipped")
-                    quarantined_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="quarantined")
-                    validated_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="validated")
-                    kg_failure_count = review_count + quarantined_count
-                    kg_metrics = {
-                        **self._build_graph_quality_metrics(document_id, len(accepted_chunks)),
-                        "resumed": True,
-                    }
-
-                start_stage(
-                    "indexed",
-                    "embedding",
-                    "Resuming vector publish for accepted chunks and assets.",
-                    metrics={
-                        "indexed_chunks": 0,
-                        "indexed_assets": 0,
-                        "publish_skipped_due_to_kg_review": bool(kg_failure_count),
-                        "resumed": True,
-                    },
-                )
-                indexed_chunks = 0
-                indexed_assets = 0
-                if kg_failure_count == 0:
-                    ensure_lease_active()
-                    chunk_embeddings = self.embedder.embed(
-                        [chunk.text for chunk in accepted_chunks],
-                        progress_callback=(
-                            lambda update: self._emit_progress(
-                                phase="embedding",
-                                detail=f"Embedding accepted chunks {int(update.get('completed') or 0)}/{int(update.get('total') or 0)}.",
-                                document_id=document_id,
-                                job_id=job_id,
-                                metrics={
-                                    "embedding_target": "chunks",
-                                    "completed": int(update.get("completed") or 0),
-                                    "total": int(update.get("total") or 0),
-                                    "batch_size": int(update.get("batch_size") or 0),
-                                    "resumed": True,
-                                },
-                            )
-                        ) if accepted_chunks else None,
-                    ) if accepted_chunks else []
-                    ensure_lease_active()
-                    indexable_assets = [asset for asset in all_assets if self._is_indexable_asset(asset)]
-                    asset_embeddings = self.embedder.embed(
-                        [asset.search_text for asset in indexable_assets],
-                        progress_callback=(
-                            lambda update: self._emit_progress(
-                                phase="embedding",
-                                detail=f"Embedding assets {int(update.get('completed') or 0)}/{int(update.get('total') or 0)}.",
-                                document_id=document_id,
-                                job_id=job_id,
-                                metrics={
-                                    "embedding_target": "assets",
-                                    "completed": int(update.get("completed") or 0),
-                                    "total": int(update.get("total") or 0),
-                                    "batch_size": int(update.get("batch_size") or 0),
-                                    "resumed": True,
-                                },
-                            )
-                        ) if indexable_assets else None,
-                    ) if indexable_assets else []
-                    ensure_lease_active()
-                    indexed_chunks, indexed_assets = self._publish_fresh_document_vectors(
-                        document_id=document_id,
-                        accepted_chunks=accepted_chunks,
-                        chunk_embeddings=chunk_embeddings,
-                        indexable_assets=indexable_assets,
-                        asset_embeddings=asset_embeddings,
-                    )
-                else:
-                    indexable_assets = [asset for asset in all_assets if self._is_indexable_asset(asset)]
-                finish_stage(
-                    "embedding" if kg_failure_count == 0 else "review",
-                    "Completed vector publish." if kg_failure_count == 0 else "Skipped vector publish because KG review is required.",
-                    "completed" if kg_failure_count == 0 else "review",
-                    metrics={
-                        **self._build_completion_metrics(
-                            document_id,
-                            indexed_chunks=indexed_chunks,
-                            indexed_assets=indexed_assets,
-                            publish_skipped_due_to_kg_review=bool(kg_failure_count),
-                        ),
-                        "resumed": True,
-                    },
-                    terminal_job_status="completed" if kg_failure_count == 0 else "review",
-                )
-                corpus_snapshot_id = None
-                completion_counts = self.repository.get_document_related_counts(document_id)
-                if kg_failure_count == 0:
-                    corpus_snapshot_id = self.repository.create_corpus_snapshot(
-                        str(source_row["tenant_id"]),
-                        "document_publish",
-                        document_id=document_id,
-                        job_id=job_id,
-                        summary=f"Published resumed document {source.filename} into the retrieval-visible corpus.",
-                        metrics={
-                            "accepted_chunks": len(accepted_chunks),
-                            "indexed_chunks": indexed_chunks,
-                            "indexed_assets": indexed_assets,
-                            "pages": len(self.repository.list_document_pages(document_id=document_id, limit=5000)),
-                            "page_assets": len(all_assets),
-                            "resumed": True,
-                        },
-                        metadata={
-                            "filename": source.filename,
-                            "document_class": str(source_row.get("document_class") or ""),
-                            "resume_from_status": current_status,
-                        },
-                    )
-                return {
-                    "job_id": job_id,
-                    "document_id": document_id,
-                    "source_id": str(source_row["source_id"]),
-                    "blocks": 0,
-                    "chunks": int(completion_counts.get("chunks") or len(accepted_rows)),
-                    "accepted_chunks": int(completion_counts.get("accepted_chunks") or len(accepted_chunks)),
-                    "review_chunks": int(completion_counts.get("review_chunks") or 0),
-                    "rejected_chunks": int(completion_counts.get("rejected_chunks") or 0),
-                    "pages": len(self.repository.list_document_pages(document_id=document_id, limit=5000)),
-                    "page_assets": len(all_assets),
-                    "indexed_chunks": indexed_chunks,
-                    "indexed_assets": indexed_assets,
-                    **self._build_graph_quality_metrics(document_id, len(accepted_chunks)),
-                    "kg_failures": [] if kg_failure_count == 0 else [{"review": review_count, "quarantined": quarantined_count}],
-                    "corpus_snapshot_id": corpus_snapshot_id,
-                    "resumed": True,
-                    "resume_from_status": current_status,
-                }
-            finally:
-                lease_stop.set()
-                lease_thread.join(timeout=5)
-                self.repository.release_job(job_id, self.worker_id)
+        return resume_ingest_stage.resume_document_ingest(self, document_id)
 
     def revalidate_document(self, document_id: str, rerun_kg: bool = True) -> dict:
-        with self.repository.advisory_lock("document-mutate", document_id):
-            rows = self.repository.list_document_chunk_records(document_id=document_id)
-            if not rows:
-                raise ValueError("Document has no stored chunks")
-
-            # Revalidation rebuilds the in-memory chunk objects from persisted rows so the
-            # current validator and enrichment rules can be applied without re-parsing.
-            chunks = [self._chunk_from_record(row) for row in rows]
-            assets = self._list_all_page_assets(document_id)
-            links = self._relink_chunks_with_assets(document_id, chunks, assets, persist=False)
-            linked_assets_by_chunk = self._group_assets_by_chunk(links, assets)
-            validations = [validate_chunk(chunk) for chunk in chunks]
-            accepted_chunks: list[Chunk] = []
-            rejected_chunk_ids: list[str] = []
-            kg_results: list[dict] = []
-            chunk_updates: list[dict[str, object]] = []
-
-            for chunk, validation in zip(chunks, validations):
-                self._apply_chunk_enrichment(chunk, validation.status, validation.quality_score, validation.reasons)
-                chunk_updates.append(
-                    {
-                        "chunk_id": chunk.chunk_id,
-                        "status": validation.status,
-                        "quality_score": validation.quality_score,
-                        "reasons": list(validation.reasons),
-                        "metadata": dict(chunk.metadata),
-                    }
-                )
-                if validation.status == "accepted":
-                    accepted_chunks.append(chunk)
-                else:
-                    rejected_chunk_ids.append(chunk.chunk_id)
-
-            embeddings = self.embedder.embed([chunk.text for chunk in accepted_chunks]) if accepted_chunks else []
-
-            if rerun_kg:
-                for chunk in accepted_chunks:
-                    kg_results.append(
-                        self._run_kg_pipeline(
-                            document_id,
-                            chunk,
-                            linked_assets=linked_assets_by_chunk.get(chunk.chunk_id, []),
-                            persist=False,
-                        )
-                    )
-
-            if accepted_chunks:
-                self.store.upsert_chunks(accepted_chunks, embeddings)
-            kg_counts = {"validated": 0, "review": 0, "skipped": 0, "quarantined": 0}
-            self.repository.apply_revalidation_state(
-                document_id,
-                links,
-                chunk_updates,
-                kg_results=kg_results if rerun_kg else None,
-                remove_chunk_kg_ids=rejected_chunk_ids if not rerun_kg else None,
-            )
-            for chunk_id in rejected_chunk_ids:
-                self.store.delete_chunk(chunk_id)
-            if rerun_kg:
-                for kg_result in kg_results:
-                    kg_counts[str(kg_result["status"])] = kg_counts.get(str(kg_result["status"]), 0) + 1
-            self._refresh_document_synopses(
-                document_id,
-                accepted_chunks=accepted_chunks,
-                source_stage="revalidated",
-            )
-
-            return {
-                "document_id": document_id,
-                "chunks": len(chunks),
-                "accepted": len(accepted_chunks),
-                "review": len([item for item in validations if item.status == "review"]),
-                "rejected": len([item for item in validations if item.status == "rejected"]),
-                "kg": kg_counts,
-            }
+        return revalidate_document_stage.revalidate_document(self, document_id, rerun_kg=rerun_kg)
 
     def reindex_document(self, document_id: str) -> dict:
-        with self.repository.advisory_lock("document-mutate", document_id):
-            rows = self.repository.list_document_chunk_records(document_id=document_id)
-            if not rows:
-                raise ValueError("Document has no stored chunks")
-
-            # Reindexing never reparses the document. It only takes the currently accepted
-            # chunks, re-enriches their metadata, and rewrites the vector store.
-            accepted_rows = [row for row in rows if row["validation_status"] == "accepted"]
-            accepted_chunks: list[Chunk] = []
-            for row in accepted_rows:
-                chunk = self._chunk_from_record(row)
-                self._apply_chunk_enrichment(
-                    chunk,
-                    row["validation_status"],
-                    float(row.get("quality_score") or 0.0),
-                    list(row.get("reasons") or []),
-                )
-                accepted_chunks.append(chunk)
-            asset_objects = self._list_all_page_assets(document_id)
-            self._relink_chunks_with_assets(document_id, accepted_chunks, asset_objects, persist=True)
-            for chunk in accepted_chunks:
-                self.repository.update_chunk_metadata(chunk.chunk_id, chunk.metadata)
-
-            if asset_objects:
-                self.repository.save_page_assets(asset_objects)
-            chunk_embeddings = self.embedder.embed([chunk.text for chunk in accepted_chunks]) if accepted_chunks else []
-            indexable_assets = [asset for asset in asset_objects if self._is_indexable_asset(asset)]
-            asset_embeddings = self.embedder.embed([asset.search_text for asset in indexable_assets]) if indexable_assets else []
-            if accepted_chunks:
-                self.store.upsert_chunks(accepted_chunks, chunk_embeddings)
-            if indexable_assets:
-                self.store.upsert_assets(indexable_assets, asset_embeddings)
-            accepted_chunk_ids = {chunk.chunk_id for chunk in accepted_chunks}
-            for row in rows:
-                chunk_id = str(row["chunk_id"])
-                if chunk_id not in accepted_chunk_ids:
-                    self.store.delete_chunk(chunk_id)
-            indexed_asset_ids = {asset.asset_id for asset in indexable_assets}
-            for asset in asset_objects:
-                if asset.asset_id not in indexed_asset_ids:
-                    self.store.delete_asset(asset.asset_id)
-
-            return {
-                "document_id": document_id,
-                "accepted": len(accepted_chunks),
-                "removed": len(rows) - len(accepted_chunks),
-            }
+        return reindex_document_stage.reindex_document(self, document_id)
 
     def sync_chunk_index(self, chunk_id: str) -> dict:
         row = self.repository.get_chunk_record(chunk_id)
@@ -1112,34 +780,13 @@ class IngestionService:
         return {"asset_id": asset_id, "indexed": False}
 
     def delete_document(self, document_id: str) -> dict:
-        with self.repository.advisory_lock("document-mutate", document_id):
-            deleted = self.repository.delete_document(document_id)
-            if not deleted:
-                raise ValueError("Document not found")
-            self.store.delete_document(document_id)
-            self._delete_page_asset_files(document_id)
-            self.repository.prune_orphan_kg_entities()
-            return {"document_id": document_id, "deleted": True}
+        return delete_document_stage.delete_document(self, document_id)
 
     def reset_pipeline_data(self) -> dict:
-        result = self.reset_ingestion_data(document_id=None)
-        result["reset"] = True
-        return result
+        return reset_pipeline_data_stage.reset_pipeline_data(self)
 
     def reset_ingestion_data(self, document_id: str | None = None) -> dict:
-        if document_id:
-            with self.repository.advisory_lock("document-mutate", document_id):
-                deleted = self.repository.delete_document(document_id)
-                if not deleted:
-                    raise ValueError("Document not found")
-                self.store.delete_document(document_id)
-                self._delete_page_asset_files(document_id)
-                return {"document_id": document_id, "cleared": "document"}
-        with self.repository.advisory_lock("pipeline-reset", "all"):
-            self.repository.clear_ingestion_data()
-            self.store.reset_collection()
-            self._delete_page_asset_files()
-            return {"cleared": "all"}
+        return reset_ingestion_data_stage.reset_ingestion_data(self, document_id=document_id)
 
     def review_chunk_decision(self, chunk_id: str, action: str) -> dict:
         with self.repository.advisory_lock("chunk-review", chunk_id):
@@ -1243,45 +890,7 @@ class IngestionService:
         }
 
     def reprocess_kg(self, document_id: str | None = None, batch_size: int = 200, prune_orphans: bool = True) -> dict:
-        lock_parts = ("document-mutate", document_id) if document_id else ("pipeline-kg-replay", "all")
-        with self.repository.advisory_lock(*lock_parts):
-            processed = 0
-            validated = 0
-            review = 0
-            skipped = 0
-            quarantined = 0
-            offset = 0
-
-            while True:
-                # KG replay only targets accepted chunks. Chunk review/rejection happens
-                # upstream and is treated as a prerequisite for KG work.
-                rows = self.repository.list_chunk_records_for_kg(document_id=document_id, limit=batch_size, offset=offset)
-                if not rows:
-                    break
-                for row in rows:
-                    chunk = self._chunk_from_record(row)
-                    kg_record = self._run_kg_pipeline(chunk.document_id, chunk, linked_assets=self._load_assets_for_chunk(chunk.chunk_id))
-                    processed += 1
-                    if kg_record["status"] == "validated":
-                        validated += 1
-                    elif kg_record["status"] == "review":
-                        review += 1
-                    elif kg_record["status"] == "skipped":
-                        skipped += 1
-                    elif kg_record["status"] == "quarantined":
-                        quarantined += 1
-                offset += len(rows)
-
-            pruned_entities = self.repository.prune_orphan_kg_entities() if prune_orphans else 0
-            return {
-                "document_id": document_id,
-                "processed_chunks": processed,
-                "validated": validated,
-                "review": review,
-                "skipped": skipped,
-                "quarantined": quarantined,
-                "pruned_entities": pruned_entities,
-            }
+        return reprocess_kg_stage.reprocess_kg(self, document_id=document_id, batch_size=batch_size, prune_orphans=prune_orphans)
 
     def replay_quarantined_kg(
         self,
@@ -1290,43 +899,7 @@ class IngestionService:
         chunk_ids: list[str] | None = None,
         publish_if_clean: bool = True,
     ) -> dict:
-        requested_chunk_ids = [str(chunk_id).strip() for chunk_id in (chunk_ids or []) if str(chunk_id).strip()]
-        document_targets: dict[str, set[str]] = {}
-
-        if requested_chunk_ids:
-            for chunk_id in requested_chunk_ids:
-                extraction_rows = self._list_all_kg_raw_extractions(chunk_id=chunk_id, status="quarantined", batch_size=10)
-                if not extraction_rows:
-                    continue
-                chunk_document_id = str(extraction_rows[0]["document_id"])
-                document_targets.setdefault(chunk_document_id, set()).add(chunk_id)
-        elif document_id:
-            document_targets[str(document_id)] = set()
-        else:
-            for extraction in self._list_all_kg_raw_extractions(status="quarantined"):
-                document_targets.setdefault(str(extraction["document_id"]), set()).add(str(extraction["chunk_id"]))
-
-        document_results: list[dict[str, Any]] = []
-        replayed_chunks = 0
-        published_documents = 0
-
-        for target_document_id, target_chunk_ids in document_targets.items():
-            result = self._replay_quarantined_document_kg(
-                target_document_id,
-                target_chunk_ids=sorted(target_chunk_ids) if target_chunk_ids else None,
-                publish_if_clean=publish_if_clean,
-            )
-            replayed_chunks += int(result.get("replayed_chunks") or 0)
-            if result.get("published"):
-                published_documents += 1
-            document_results.append(result)
-
-        return {
-            "document_results": document_results,
-            "documents": len(document_results),
-            "replayed_chunks": replayed_chunks,
-            "published_documents": published_documents,
-        }
+        return replay_quarantined_kg_stage.replay_quarantined_kg(self, document_id=document_id, chunk_ids=chunk_ids, publish_if_clean=publish_if_clean)
 
     def _replay_quarantined_document_kg(
         self,
@@ -1335,341 +908,11 @@ class IngestionService:
         target_chunk_ids: list[str] | None = None,
         publish_if_clean: bool = True,
     ) -> dict[str, Any]:
-        with self.repository.advisory_lock("document-mutate", document_id):
-            source_row = self.repository.get_latest_document_source(document_id)
-            if source_row is None:
-                raise ValueError("Document source not found")
-
-            accepted_rows = self._list_all_chunk_records_for_kg(document_id)
-            accepted_rows_by_id = {str(row["chunk_id"]): row for row in accepted_rows}
-            quarantined_rows = self._list_all_kg_raw_extractions(document_id=document_id, status="quarantined")
-            quarantined_chunk_ids = {str(row["chunk_id"]) for row in quarantined_rows}
-            requested_chunk_ids = {str(chunk_id) for chunk_id in (target_chunk_ids or []) if str(chunk_id)}
-            selected_chunk_ids = requested_chunk_ids or quarantined_chunk_ids
-            target_rows = [accepted_rows_by_id[chunk_id] for chunk_id in selected_chunk_ids if chunk_id in accepted_rows_by_id]
-            target_rows.sort(key=lambda row: int(row.get("chunk_index") or 0))
-            skipped_chunk_ids = sorted(selected_chunk_ids - {str(row["chunk_id"]) for row in target_rows})
-
-            if not target_rows and not publish_if_clean:
-                return {
-                    "document_id": document_id,
-                    "job_id": None,
-                    "replayed_chunks": 0,
-                    "requested_chunks": len(selected_chunk_ids),
-                    "skipped_chunks": skipped_chunk_ids,
-                    "published": False,
-                    "status": str((self.repository.get_document_detail(document_id) or {}).get("document", {}).get("status") or ""),
-                }
-
-            job_id = self.repository.create_job(
-                document_id=document_id,
-                extractor_version=settings.extractor_version,
-                normalizer_version=settings.normalizer_version,
-                parser_version=str(source_row.get("parser_version") or "v1"),
-                chunker_version=settings.chunker_version,
-                validator_version=settings.validator_version,
-                embedding_version=settings.embedding_model,
-                kg_version=f"{settings.kg_extraction_provider}:{settings.kg_model}:{settings.kg_prompt_version}",
-            )
-            if not self.repository.claim_job(job_id, self.worker_id, settings.job_lease_seconds):
-                raise ValueError("Unable to claim KG replay job")
-
-            input_version = self._build_input_version(str(source_row.get("parser_version") or "v1"))
-            lease_stop = threading.Event()
-            lease_lost = threading.Event()
-            lease_interval_seconds = max(5, min(settings.job_lease_seconds // 3, 60))
-            active_stage_run_id: str | None = None
-
-            def renew_lease_loop() -> None:
-                while not lease_stop.wait(lease_interval_seconds):
-                    try:
-                        renewed = self.repository.renew_job_lease(job_id, self.worker_id, settings.job_lease_seconds)
-                    except Exception:
-                        logger.warning("Failed to renew KG replay job lease for %s", job_id, exc_info=True)
-                        continue
-                    if not renewed:
-                        logger.warning("Lost KG replay job lease for %s", job_id)
-                        lease_lost.set()
-                        break
-
-            def ensure_lease_active() -> None:
-                if lease_lost.is_set():
-                    raise RuntimeError("KG replay job lease was lost during processing")
-
-            def record_completed_stage(stage_name: str, job_status: str, detail: str, metrics: dict[str, Any]) -> None:
-                started_at = datetime.now(UTC)
-                self.repository.record_stage(
-                    job_id=job_id,
-                    document_id=document_id,
-                    stage_name=stage_name,
-                    job_status=job_status,
-                    stage_outcome="completed",
-                    metrics=metrics,
-                    worker_version=settings.worker_version,
-                    input_version=input_version,
-                    started_at=started_at,
-                    finished_at=started_at,
-                )
-                self._emit_progress(
-                    phase=stage_name,
-                    detail=detail,
-                    document_id=document_id,
-                    job_id=job_id,
-                    metrics=metrics,
-                )
-
-            def start_stage(stage_name: str, phase: str, detail: str, metrics: dict[str, Any]) -> None:
-                nonlocal active_stage_run_id
-                active_stage_run_id = self.repository.start_stage_run(
-                    job_id=job_id,
-                    document_id=document_id,
-                    stage_name=stage_name,
-                    job_status=stage_name,
-                    metrics=metrics,
-                    worker_version=settings.worker_version,
-                    input_version=input_version,
-                    started_at=datetime.now(UTC),
-                )
-                self._emit_progress(
-                    phase=phase,
-                    detail=detail,
-                    document_id=document_id,
-                    job_id=job_id,
-                    metrics=metrics,
-                )
-
-            def finish_stage(
-                phase: str,
-                detail: str,
-                outcome: str,
-                *,
-                metrics: dict[str, Any],
-                job_status: str | None = None,
-                error_message: str | None = None,
-            ) -> None:
-                nonlocal active_stage_run_id
-                if active_stage_run_id is None:
-                    return
-                self.repository.finish_stage_run(
-                    stage_run_id=active_stage_run_id,
-                    job_id=job_id,
-                    document_id=document_id,
-                    stage_outcome=outcome,
-                    job_status=job_status,
-                    metrics=metrics,
-                    error_message=error_message,
-                    finished_at=datetime.now(UTC),
-                )
-                self._emit_progress(
-                    phase=phase,
-                    detail=detail,
-                    document_id=document_id,
-                    job_id=job_id,
-                    metrics=metrics,
-                )
-                active_stage_run_id = None
-
-            lease_thread = threading.Thread(target=renew_lease_loop, name=f"kg-replay-lease-{job_id}", daemon=True)
-            lease_thread.start()
-            try:
-                summary_metrics = {
-                    "repair": True,
-                    "requested_quarantined_chunks": len(selected_chunk_ids),
-                    "replay_chunks": len(target_rows),
-                    "skipped_chunks": len(skipped_chunk_ids),
-                }
-                record_completed_stage("content_available", "content_available", "Using persisted source and assets for targeted KG replay.", summary_metrics)
-                record_completed_stage("parsed", "parsed", "Using previously parsed blocks.", summary_metrics)
-                record_completed_stage("chunked", "chunked", "Using previously chunked accepted content.", summary_metrics)
-                record_completed_stage("chunks_validated", "chunks_validated", "Using previously validated accepted chunks.", summary_metrics)
-
-                replay_metrics = {
-                    "repair": True,
-                    "kg_total": len(target_rows),
-                    "kg_completed": 0,
-                    "kg_failures": 0,
-                    "skipped_chunks": len(skipped_chunk_ids),
-                }
-                start_stage(
-                    "kg_validated",
-                    "kg",
-                    f"Replaying quarantined KG chunks {0}/{len(target_rows)}.",
-                    replay_metrics,
-                )
-
-                replayed_chunks = 0
-                replay_status_counts: dict[str, int] = {"validated": 0, "review": 0, "skipped": 0, "quarantined": 0}
-                for index, row in enumerate(target_rows, start=1):
-                    ensure_lease_active()
-                    chunk = self._chunk_from_record(row)
-                    kg_record = self._run_kg_pipeline(
-                        document_id,
-                        chunk,
-                        linked_assets=self._load_assets_for_chunk(chunk.chunk_id),
-                        pre_persist_check=ensure_lease_active,
-                    )
-                    replayed_chunks += 1
-                    replay_status = str(kg_record["status"])
-                    replay_status_counts[replay_status] = replay_status_counts.get(replay_status, 0) + 1
-                    self._emit_progress(
-                        phase="kg",
-                        detail=f"Replaying quarantined KG chunks {index}/{len(target_rows)}.",
-                        document_id=document_id,
-                        job_id=job_id,
-                        metrics={
-                            "repair": True,
-                            "kg_total": len(target_rows),
-                            "kg_completed": index,
-                            "kg_failures": replay_status_counts.get("review", 0) + replay_status_counts.get("quarantined", 0),
-                            "skipped_chunks": len(skipped_chunk_ids),
-                        },
-                    )
-
-                review_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="review")
-                skipped_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="skipped")
-                quarantined_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="quarantined")
-                validated_count = self.repository.count_kg_raw_extractions(document_id=document_id, status="validated")
-                kg_failure_count = review_count + quarantined_count
-                final_kg_metrics = {
-                    "repair": True,
-                    "requested_quarantined_chunks": len(selected_chunk_ids),
-                    "replayed_chunks": replayed_chunks,
-                    "skipped_chunks": len(skipped_chunk_ids),
-                    "kg_total": validated_count + review_count + skipped_count + quarantined_count,
-                    "kg_validated": validated_count,
-                    "kg_review": review_count,
-                    "kg_skipped": skipped_count,
-                    "kg_quarantined": quarantined_count,
-                }
-
-                if kg_failure_count > 0:
-                    finish_stage(
-                        "review",
-                        "KG replay finished but review is still required.",
-                        "review",
-                        metrics=final_kg_metrics,
-                        job_status="review",
-                        error_message=None if review_count == 0 and quarantined_count == 0 else str({"review": review_count, "quarantined": quarantined_count}),
-                    )
-                    return {
-                        "document_id": document_id,
-                        "job_id": job_id,
-                        "replayed_chunks": replayed_chunks,
-                        "requested_chunks": len(selected_chunk_ids),
-                        "skipped_chunks": skipped_chunk_ids,
-                        "published": False,
-                        "status": "review",
-                        "kg_review": review_count,
-                        "kg_quarantined": quarantined_count,
-                    }
-
-                finish_stage(
-                    "kg",
-                    "Completed targeted KG replay.",
-                    "completed",
-                    metrics=final_kg_metrics,
-                )
-
-                indexed_chunks = 0
-                indexed_assets = 0
-                if publish_if_clean:
-                    all_assets = self._list_all_page_assets(document_id)
-                    accepted_chunks = [self._chunk_from_record(row) for row in accepted_rows]
-                    indexable_assets = [asset for asset in all_assets if self._is_indexable_asset(asset)]
-                    start_stage(
-                        "indexed",
-                        "embedding",
-                        "Publishing vectors for repaired document.",
-                        {
-                            "repair": True,
-                            "indexed_chunks": 0,
-                            "indexed_assets": 0,
-                            "accepted_chunks": len(accepted_chunks),
-                            "indexable_assets": len(indexable_assets),
-                        },
-                    )
-                    ensure_lease_active()
-                    chunk_embeddings = self.embedder.embed([chunk.text for chunk in accepted_chunks]) if accepted_chunks else []
-                    ensure_lease_active()
-                    asset_embeddings = self.embedder.embed([asset.search_text for asset in indexable_assets]) if indexable_assets else []
-                    ensure_lease_active()
-                    indexed_chunks, indexed_assets = self._publish_fresh_document_vectors(
-                        document_id=document_id,
-                        accepted_chunks=accepted_chunks,
-                        chunk_embeddings=chunk_embeddings,
-                        indexable_assets=indexable_assets,
-                        asset_embeddings=asset_embeddings,
-                    )
-                    finish_stage(
-                        "embedding",
-                        "Completed vector publish for repaired document.",
-                        "completed",
-                        metrics={
-                            "repair": True,
-                            "indexed_chunks": indexed_chunks,
-                            "indexed_assets": indexed_assets,
-                            "accepted_chunks": len(accepted_chunks),
-                            "indexable_assets": len(indexable_assets),
-                        },
-                        job_status="completed",
-                    )
-                else:
-                    self.repository.update_document_record(document_id, {"status": "completed"})
-                    self.repository.record_stage(
-                        job_id=job_id,
-                        document_id=document_id,
-                        stage_name="indexed",
-                        job_status="completed",
-                        stage_outcome="completed",
-                        metrics={"repair": True, "publish_skipped": True},
-                        worker_version=settings.worker_version,
-                        input_version=input_version,
-                        started_at=datetime.now(UTC),
-                        finished_at=datetime.now(UTC),
-                    )
-
-                return {
-                    "document_id": document_id,
-                    "job_id": job_id,
-                    "replayed_chunks": replayed_chunks,
-                    "requested_chunks": len(selected_chunk_ids),
-                    "skipped_chunks": skipped_chunk_ids,
-                    "published": bool(publish_if_clean),
-                    "status": "completed",
-                    "indexed_chunks": indexed_chunks,
-                    "indexed_assets": indexed_assets,
-                    "kg_review": 0,
-                    "kg_quarantined": 0,
-                }
-            except Exception:
-                if active_stage_run_id is not None:
-                    try:
-                        finish_stage(
-                            "failed",
-                            "Targeted KG replay failed.",
-                            "failed",
-                            metrics={"repair": True},
-                            job_status="failed",
-                            error_message="targeted_kg_replay_failed",
-                        )
-                    except Exception:
-                        pass
-                raise
-            finally:
-                lease_stop.set()
-                lease_thread.join(timeout=5)
-                self.repository.release_job(job_id, self.worker_id)
+        return replay_quarantined_kg_stage._replay_quarantined_document_kg(self, document_id, target_chunk_ids=target_chunk_ids, publish_if_clean=publish_if_clean)
 
     @staticmethod
     def _prepare_source(source: SourceDocument) -> SourceDocument:
-        source.raw_text = sanitize_text(source.raw_text)
-        source.normalized_text = sanitize_text(source.normalized_text or "")
-        normalized_text = source.normalized_text or normalize_text(source.raw_text)
-        normalized_text = sanitize_text(normalized_text)
-        extraction_metrics = source.extraction_metrics or build_extraction_metrics(source.raw_text, normalized_text)
-        source.normalized_text = normalized_text
-        source.extraction_metrics = extraction_metrics
-        return source
+        return prepare_source_document(source)
 
     def _process_registered_document(
         self,
@@ -1677,17 +920,9 @@ class IngestionService:
         source_id: str,
         source: SourceDocument,
         delete_document_on_failure: bool = True,
+        job_id: str | None = None,
     ) -> dict:
-        job_id = self.repository.create_job(
-            document_id=document_id,
-            extractor_version=settings.extractor_version,
-            normalizer_version=settings.normalizer_version,
-            parser_version=source.parser_version,
-            chunker_version=settings.chunker_version,
-            validator_version=settings.validator_version,
-            embedding_version=settings.embedding_model,
-            kg_version=f"{settings.kg_extraction_provider}:{settings.kg_model}:{settings.kg_prompt_version}",
-        )
+        job_id = job_id or self._create_ingestion_job_for_source(document_id, source)
         if not self.repository.claim_job(job_id, self.worker_id, settings.job_lease_seconds):
             raise ValueError("Unable to claim ingestion job")
 
@@ -1808,224 +1043,52 @@ class IngestionService:
                 metrics=extraction_metrics,
             )
 
-            start_stage(
-                "parsed",
-                "parsing",
-                "Parsing normalized text into structural blocks.",
-                metrics={"source_chars": len(normalized_text)},
-            )
-            blocks = parse_text(document_id=document_id, text=normalized_text, document_class=source.document_class)
-            ensure_lease_active()
-            self.repository.save_blocks(blocks)
-            finish_stage(
-                "parsing",
-                f"Parsed {len(blocks)} structural blocks.",
-                "completed",
-                metrics={"blocks": len(blocks)},
-            )
-
-            start_stage(
-                "chunked",
-                "chunking",
-                "Building persisted chunk records and chunk-asset links.",
-                metrics={"blocks": len(blocks)},
-            )
-            chunks = build_chunks(
+            chunk_stage = run_chunk_documents_stage(
+                self,
                 document_id=document_id,
-                tenant_id=source.tenant_id,
-                blocks=blocks,
-                parser_version=source.parser_version,
-                chunker_version=settings.chunker_version,
-                document_class=source.document_class,
-                filename=source.filename,
-            )
-            ensure_lease_active()
-            self.repository.save_chunks(chunks)
-            if multimodal_payload is not None:
-                links = self._relink_chunks_with_assets(document_id, chunks, multimodal_payload.assets, persist=True)
-                linked_assets_by_chunk = self._group_assets_by_chunk(links, multimodal_payload.assets)
-            finish_stage(
-                "chunking",
-                f"Built {len(chunks)} chunks.",
-                "completed",
-                metrics={"chunks": len(chunks)},
-            )
-
-            start_stage(
-                "chunks_validated",
-                "validating",
-                "Scoring chunks and classifying them into accepted/review/rejected buckets.",
-                metrics={"chunks": len(chunks)},
-            )
-            validations = [validate_chunk(chunk) for chunk in chunks]
-            ensure_lease_active()
-            self.repository.save_validations(validations)
-            accepted_chunks = [chunk for chunk, validation in zip(chunks, validations) if validation.status == "accepted"]
-            validation_metrics = {
-                "accepted": len(accepted_chunks),
-                "review": len([item for item in validations if item.status == "review"]),
-                "rejected": len([item for item in validations if item.status == "rejected"]),
-            }
-            finish_stage(
-                "validating",
-                "Completed chunk validation.",
-                "completed",
-                metrics=validation_metrics,
-            )
-
-            # Persist enrichment for every chunk so failed/reviewed documents remain inspectable in the admin UI.
-            for chunk, validation in zip(chunks, validations):
-                self._apply_chunk_enrichment(chunk, validation.status, validation.quality_score, validation.reasons)
-                self.repository.update_chunk_metadata(chunk.chunk_id, chunk.metadata)
-            synopsis_metrics = self._refresh_document_synopses(
-                document_id,
-                accepted_chunks=accepted_chunks,
-                source_stage="chunks_validated",
-            )
-            self._emit_progress(
-                phase="synopsis",
-                detail=f"Prepared {int(synopsis_metrics['sections'])} section synopses.",
-                document_id=document_id,
+                source=source,
+                normalized_text=normalized_text,
+                multimodal_payload=multimodal_payload,
                 job_id=job_id,
-                metrics=synopsis_metrics,
+                ensure_lease_active=ensure_lease_active,
+                start_stage=start_stage,
+                finish_stage=finish_stage,
+            )
+            blocks = chunk_stage.blocks
+            chunks = chunk_stage.chunks
+            accepted_chunks = chunk_stage.accepted_chunks
+            validation_metrics = chunk_stage.validation_metrics
+            linked_assets_by_chunk = chunk_stage.linked_assets_by_chunk
+
+            kg_results, kg_failures, kg_metrics = run_build_kg_stage(
+                self,
+                document_id=document_id,
+                accepted_chunks=accepted_chunks,
+                linked_assets_by_chunk=linked_assets_by_chunk,
+                job_id=job_id,
+                ensure_lease_active=ensure_lease_active,
+                start_stage=start_stage,
+                finish_stage=finish_stage,
             )
 
-            kg_results = []
-            kg_failures = []
-            # KG validation runs before vector publish so a document is not exposed in
-            # Chroma until the ingestion pass is otherwise complete.
-            start_stage(
-                "kg_validated",
-                "kg",
-                f"Running KG extraction over {len(accepted_chunks)} accepted chunks.",
-                metrics={"kg_total": len(accepted_chunks), "kg_completed": 0, "kg_failures": 0},
+            publish_result = run_publish_corpus_stage(
+                self,
+                document_id=document_id,
+                source=source,
+                blocks_count=len(blocks),
+                chunks_count=len(chunks),
+                accepted_chunks=accepted_chunks,
+                multimodal_payload=multimodal_payload,
+                kg_failures=kg_failures,
+                job_id=job_id,
+                ensure_lease_active=ensure_lease_active,
+                start_stage=start_stage,
+                finish_stage=finish_stage,
             )
-            for index, chunk in enumerate(accepted_chunks, start=1):
-                ensure_lease_active()
-                self._emit_progress(
-                    phase="kg",
-                    detail=f"KG extraction {index}/{len(accepted_chunks)}.",
-                    document_id=document_id,
-                    job_id=job_id,
-                    metrics={
-                        "kg_total": len(accepted_chunks),
-                        "kg_completed": index - 1,
-                        "kg_failures": len(kg_failures),
-                    },
-                )
-                kg_result = self._run_kg_pipeline(
-                    document_id,
-                    chunk,
-                    linked_assets=linked_assets_by_chunk.get(chunk.chunk_id, []),
-                    pre_persist_check=ensure_lease_active,
-                )
-                kg_results.append(kg_result)
-                if kg_result["status"] not in {"validated", "skipped"}:
-                    kg_failures.append({"chunk_id": chunk.chunk_id, "status": kg_result["status"], "errors": kg_result["errors"]})
-            kg_metrics = self._build_graph_quality_metrics(document_id, len(accepted_chunks))
-            finish_stage(
-                "kg",
-                "Completed KG extraction.",
-                "completed" if not kg_failures else "review",
-                metrics=kg_metrics,
-                error_message=None if not kg_failures else str(kg_failures),
-            )
-
-            final_status = "completed" if not kg_failures else "review"
-            indexed_chunks = 0
-            indexed_assets = 0
-            start_stage(
-                "indexed",
-                "embedding",
-                "Generating vectors and publishing accepted chunks and assets.",
-                metrics={
-                    "indexed_chunks": 0,
-                    "indexed_assets": 0,
-                    "publish_skipped_due_to_kg_review": bool(kg_failures),
-                },
-            )
-            if not kg_failures:
-                ensure_lease_active()
-                chunk_embeddings = self.embedder.embed(
-                    [chunk.text for chunk in accepted_chunks],
-                    progress_callback=(
-                        lambda update: self._emit_progress(
-                            phase="embedding",
-                            detail=f"Embedding accepted chunks {int(update.get('completed') or 0)}/{int(update.get('total') or 0)}.",
-                            document_id=document_id,
-                            job_id=job_id,
-                            metrics={
-                                "embedding_target": "chunks",
-                                "completed": int(update.get("completed") or 0),
-                                "total": int(update.get("total") or 0),
-                                "batch_size": int(update.get("batch_size") or 0),
-                            },
-                        )
-                    ) if accepted_chunks else None,
-                ) if accepted_chunks else []
-                ensure_lease_active()
-                indexable_assets = [asset for asset in (multimodal_payload.assets if multimodal_payload else []) if self._is_indexable_asset(asset)]
-                asset_embeddings = self.embedder.embed(
-                    [asset.search_text for asset in indexable_assets],
-                    progress_callback=(
-                        lambda update: self._emit_progress(
-                            phase="embedding",
-                            detail=f"Embedding assets {int(update.get('completed') or 0)}/{int(update.get('total') or 0)}.",
-                            document_id=document_id,
-                            job_id=job_id,
-                            metrics={
-                                "embedding_target": "assets",
-                                "completed": int(update.get("completed") or 0),
-                                "total": int(update.get("total") or 0),
-                                "batch_size": int(update.get("batch_size") or 0),
-                            },
-                        )
-                    ) if indexable_assets else None,
-                ) if indexable_assets else []
-                ensure_lease_active()
-                ensure_lease_active()
-                indexed_chunks, indexed_assets = self._publish_fresh_document_vectors(
-                    document_id=document_id,
-                    accepted_chunks=accepted_chunks,
-                    chunk_embeddings=chunk_embeddings,
-                    indexable_assets=indexable_assets,
-                    asset_embeddings=asset_embeddings,
-                )
-            finish_stage(
-                "embedding" if not kg_failures else "review",
-                "Completed vector publish." if not kg_failures else "Skipped vector publish because KG review is required.",
-                "completed" if not kg_failures else "review",
-                metrics=self._build_completion_metrics(
-                    document_id,
-                    indexed_chunks=indexed_chunks,
-                    indexed_assets=indexed_assets,
-                    publish_skipped_due_to_kg_review=bool(kg_failures),
-                ),
-                terminal_job_status=final_status,
-            )
-            corpus_snapshot_id = None
-            if not kg_failures:
-                corpus_snapshot_id = self.repository.create_corpus_snapshot(
-                    source.tenant_id,
-                    "document_publish",
-                    document_id=document_id,
-                    job_id=job_id,
-                    summary=f"Published document {source.filename} into the retrieval-visible corpus.",
-                    metrics={
-                        "blocks": len(blocks),
-                        "chunks": len(chunks),
-                        "accepted_chunks": len(accepted_chunks),
-                        "pages": len(multimodal_payload.pages) if multimodal_payload else 0,
-                        "page_assets": len(multimodal_payload.assets) if multimodal_payload else 0,
-                        "indexed_chunks": indexed_chunks,
-                        "indexed_assets": indexed_assets,
-                    },
-                    metadata={
-                        "filename": source.filename,
-                        "document_class": source.document_class,
-                        "source_type": source.source_type,
-                    },
-                )
+            final_status = publish_result.final_status
+            indexed_chunks = publish_result.indexed_chunks
+            indexed_assets = publish_result.indexed_assets
+            corpus_snapshot_id = publish_result.corpus_snapshot_id
 
             return {
                 "job_id": job_id,
@@ -2086,30 +1149,7 @@ class IngestionService:
             self.repository.release_job(job_id, self.worker_id)
 
     def _extract_multimodal_payload(self, document_id: str, source: SourceDocument) -> MultimodalPDFPayload | None:
-        if source.source_type != "pdf":
-            return None
-        path = self._resolve_replayable_pdf_path(source)
-        if path is None:
-            return None
-        page_range = source.metadata.get("page_range") or {}
-        progress_callback = None
-        if self.progress_callback is not None:
-            def progress_callback(update: dict[str, Any]) -> None:
-                self._emit_progress(
-                    phase="preparing",
-                    detail=str(update.get("detail") or "Preparing multimodal PDF assets."),
-                    document_id=document_id,
-                    metrics=dict(update.get("metrics") or {}),
-                )
-        return extract_pdf_multimodal_payload(
-            document_id=document_id,
-            tenant_id=source.tenant_id,
-            path=str(path),
-            filename=source.filename,
-            page_start=page_range.get("start"),
-            page_end=page_range.get("end"),
-            progress_callback=progress_callback,
-        )
+        return extract_multimodal_payload(self, document_id=document_id, source=source)
 
     def _link_chunks_to_assets(self, chunks: list[Chunk], assets: list[PageAsset]) -> list[ChunkAssetLink]:
         if not chunks or not assets:
@@ -2510,61 +1550,14 @@ class IngestionService:
         persist: bool = True,
         pre_persist_check: Callable[[], None] | None = None,
     ) -> dict:
-        try:
-            # KG processing is a three-step pipeline: extract candidates, prune
-            # obviously invalid structures, then validate/canonicalize before write.
-            ontology = self._current_ontology()
-            effective_chunk = self._build_kg_input_chunk(chunk, linked_assets or [])
-            artifact = extract_candidates_with_meta(effective_chunk, ontology)
-            pruned_result, warnings = prune_extraction(artifact.result, ontology, settings.kg_min_confidence)
-            canonical_result = canonicalize_extraction(pruned_result, ontology)
-            valid, validation_errors = validate_extraction(canonical_result, ontology, settings.kg_min_confidence)
-            errors = list(warnings) + validation_errors
-            has_relations = bool(canonical_result.candidate_relations)
-            if not has_relations:
-                errors.append("empty_relation_set")
-            if not has_relations:
-                kg_status = "skipped"
-            else:
-                kg_status = "validated" if valid else "review"
-            payload = {
-                "chunk_id": chunk.chunk_id,
-                "status": kg_status,
-                "errors": errors,
-                "provider": artifact.provider,
-                "model": artifact.model,
-                "prompt_version": artifact.prompt_version,
-                "result": asdict(canonical_result),
-                "_result_obj": canonical_result,
-                "_raw_payload": {
-                    "model_payload": artifact.raw_payload,
-                    "linked_asset_ids": [asset.asset_id for asset in (linked_assets or [])][:8],
-                },
-            }
-            if persist:
-                if pre_persist_check is not None:
-                    pre_persist_check()
-                self._persist_kg_outcome(document_id, chunk.chunk_id, payload)
-            return payload
-        except KGExtractionError as exc:
-            errors = [f"extractor_error:{exc}"]
-            empty_result = self._empty_kg_result(document_id, chunk.chunk_id)
-            payload = {
-                "chunk_id": chunk.chunk_id,
-                "status": "quarantined",
-                "errors": errors,
-                "provider": settings.kg_extraction_provider,
-                "model": settings.kg_model,
-                "prompt_version": settings.kg_prompt_version,
-                "result": asdict(empty_result),
-                "_result_obj": empty_result,
-                "_raw_payload": {"error": str(exc)},
-            }
-            if persist:
-                if pre_persist_check is not None:
-                    pre_persist_check()
-                self._persist_kg_outcome(document_id, chunk.chunk_id, payload)
-            return payload
+        return run_kg_pipeline(
+            self,
+            document_id=document_id,
+            chunk=chunk,
+            linked_assets=linked_assets,
+            persist=persist,
+            pre_persist_check=pre_persist_check,
+        )
 
     @staticmethod
     def _append_reason(reasons: list[str], extra: str) -> list[str]:
@@ -2589,14 +1582,9 @@ class IngestionService:
 
     @staticmethod
     def _empty_kg_result(document_id: str, chunk_id: str) -> KGExtractionResult:
-        return KGExtractionResult(
-            source_id=document_id,
-            segment_id=chunk_id,
-            mentions=[],
-            candidate_entities=[],
-            candidate_relations=[],
-            evidence=[],
-        )
+        from src.bee_ingestion.offline_pipeline.stages import empty_kg_result
+
+        return empty_kg_result(document_id, chunk_id)
 
     @staticmethod
     def _chunk_from_record(record: dict) -> Chunk:

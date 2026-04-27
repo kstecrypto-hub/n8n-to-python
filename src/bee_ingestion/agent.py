@@ -14,17 +14,43 @@ import json
 import math
 import re
 import time
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
 import httpx
 
+from src.bee_ingestion.agent_runtime.contracts import AgentContextBundle, AgentPromptBundle, AgentQueryError
+from src.bee_ingestion.agent_runtime.prompt_builder import PromptBuilder
+from src.bee_ingestion.agent_generation import (
+    agent_response_schema as _agent_response_schema,
+    build_chat_payload as _build_chat_payload,
+    build_model_json_payload as _build_model_json_payload,
+    build_plaintext_recovery_payload as _build_plaintext_recovery_payload,
+    call_openai_json_payload as _call_openai_json_payload,
+    extract_message_content as _extract_message_content,
+    recover_nonempty_text_content as _recover_nonempty_text_content,
+    supports_temperature as _supports_temperature,
+    with_model_override as _with_model_override,
+)
+from src.bee_ingestion.agent_planner import (
+    build_session_title as planner_build_session_title,
+    classify_question as planner_classify_question,
+    normalize_query as planner_normalize_query,
+    resolve_query_top_k as planner_resolve_query_top_k,
+    select_retrieval_plan as planner_select_retrieval_plan,
+)
 from src.bee_ingestion.agent_runtime import (
     coerce_agent_runtime_config,
     default_agent_runtime_config,
     merged_agent_runtime_config,
+)
+from src.bee_ingestion.agent_runtime.verifier import (
+    AnswerVerifier,
+    _claim_verifier_schema as runtime_claim_verifier_schema,
+    build_supported_subset_answer as runtime_build_supported_subset_answer,
+    clean_supported_subset_claim_text as runtime_clean_supported_subset_claim_text,
+    clean_user_facing_answer_text as runtime_clean_user_facing_answer_text,
 )
 from src.bee_ingestion.chroma_store import ChromaStore
 from src.bee_ingestion.chunking import sanitize_text
@@ -32,11 +58,7 @@ from src.bee_ingestion.embedding import Embedder
 from src.bee_ingestion.query_router import classify_question_fallback, route_question_cached
 from src.bee_ingestion.repository import Repository
 from src.bee_ingestion.settings import settings
-
-
-class AgentQueryError(RuntimeError):
-    pass
-
+from src.bee_ingestion.storage.bootstrap import ensure_app_storage_compatibility
 
 _SAFE_ABSTAIN_REASONS = {
     "no_retrieval_results",
@@ -57,34 +79,55 @@ _MEMORY_KEYWORD_STOPWORDS = {
     "very", "what", "when", "where", "which", "while", "with", "would", "your",
 }
 
+def _prompt_builder() -> PromptBuilder:
+    return PromptBuilder(
+        budget_profile_summary=_budget_profile_summary,
+        budget_session_summary=_budget_session_summary,
+        filter_profile_summary=_filter_profile_summary_for_prompt,
+        filter_session_summary=_filter_session_summary_for_prompt,
+        refresh_memory_summary=_refresh_memory_summary_text,
+        refresh_profile_summary=_refresh_profile_summary_text,
+        trusted_asset_grounding_text=_trusted_asset_grounding_text,
+        trusted_sensor_grounding_text=_trusted_sensor_grounding_text,
+        extract_citation_excerpt=_extract_citation_excerpt,
+    )
 
-@dataclass(slots=True)
-class AgentContextBundle:
-    """Normalized evidence bundle assembled from chunks and KG rows."""
-    chunks: list[dict[str, Any]]
-    assets: list[dict[str, Any]]
-    sensor_rows: list[dict[str, Any]]
-    assertions: list[dict[str, Any]]
-    evidence: list[dict[str, Any]]
-    entities: list[dict[str, Any]]
-    graph_chains: list[dict[str, Any]]
-    sources: list[dict[str, Any]]
+
+def _base_answer_verifier() -> AnswerVerifier:
+    return AnswerVerifier(
+        trusted_asset_grounding_text=_trusted_asset_grounding_text,
+        sensor_grounding_series_text=_sensor_grounding_series_text,
+        lexical_grounding_check_fn=_lexical_grounding_check,
+        call_json_payload=_call_openai_json_payload,
+        extract_message_content_fn=_extract_message_content,
+    )
 
 
-@dataclass(slots=True)
-class AgentPromptBundle:
-    """Prompt-ready slice of the context bundle after budgeting/trimming."""
-    prior_context: list[dict[str, Any]]
-    profile_summary: dict[str, Any] | None
-    session_summary: dict[str, Any] | None
-    chunk_payload: list[dict[str, Any]]
-    asset_payload: list[dict[str, Any]]
-    sensor_payload: list[dict[str, Any]]
-    assertion_payload: list[dict[str, Any]]
-    entity_payload: list[dict[str, Any]]
-    graph_chain_payload: list[dict[str, Any]]
-    evidence_payload: list[dict[str, Any]]
-    stats: dict[str, Any]
+class _AgentAnswerVerifier(AnswerVerifier):
+    def verify_answer_claims_with_model(
+        self,
+        *,
+        answer: str,
+        normalized_query: str,
+        evidence_rows: list[dict[str, Any]],
+        runtime_config: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        return _verify_answer_claims_with_model(
+            answer=answer,
+            normalized_query=normalized_query,
+            evidence_rows=evidence_rows,
+            runtime_config=runtime_config,
+        )
+
+
+def _answer_verifier() -> AnswerVerifier:
+    return _AgentAnswerVerifier(
+        trusted_asset_grounding_text=_trusted_asset_grounding_text,
+        sensor_grounding_series_text=_sensor_grounding_series_text,
+        lexical_grounding_check_fn=_lexical_grounding_check,
+        call_json_payload=_call_openai_json_payload,
+        extract_message_content_fn=_extract_message_content,
+    )
 
 
 class AgentService:
@@ -94,6 +137,8 @@ class AgentService:
         store: ChromaStore | None = None,
         embedder: Embedder | None = None,
     ) -> None:
+        if repository is None:
+            ensure_app_storage_compatibility()
         self.repository = repository or Repository()
         self.store = store or ChromaStore()
         self.embedder = embedder or Embedder()
@@ -1966,138 +2011,17 @@ class AgentService:
         runtime_config: dict[str, Any],
         workspace_kind: str = "general",
     ) -> AgentPromptBundle:
-        prior_context = _budget_prior_messages(prior_messages, runtime_config["history_char_budget"])
-        profile_summary_payload = _budget_profile_summary(profile_summary, runtime_config["profile_char_budget"])
-        session_summary = _budget_session_summary(session_memory, runtime_config["memory_char_budget"])
-        pre_gated_memory_counts = {
-            "profile_topics": len((profile_summary_payload or {}).get("recurring_topics") or []),
-            "profile_goals": len((profile_summary_payload or {}).get("learning_goals") or []),
-            "session_facts": len((session_summary or {}).get("stable_facts") or []),
-            "open_threads": len((session_summary or {}).get("open_threads") or []),
-            "resolved_threads": len((session_summary or {}).get("resolved_threads") or []),
-        }
-        profile_summary_payload = _filter_profile_summary_for_prompt(
-            profile_summary_payload,
+        return _prompt_builder().build_prompt_bundle(
             question=question,
             normalized_query=normalized_query,
+            prior_messages=prior_messages,
+            profile_summary=profile_summary,
+            session_memory=session_memory,
+            bundle=bundle,
+            question_type=question_type,
+            runtime_config=runtime_config,
             workspace_kind=workspace_kind,
         )
-        session_summary = _filter_session_summary_for_prompt(
-            session_summary,
-            question=question,
-            normalized_query=normalized_query,
-            bundle=bundle,
-        )
-        chunk_payload = _budget_chunk_payload(bundle.chunks, runtime_config["chunk_char_budget"])
-        asset_payload = _budget_asset_payload(bundle.assets, runtime_config["asset_char_budget"])
-        sensor_payload = _budget_sensor_payload(bundle.sensor_rows, runtime_config["sensor_char_budget"])
-        assertion_payload = _budget_assertion_payload(bundle.assertions, runtime_config["assertion_char_budget"])
-        entity_payload = _budget_entity_payload(bundle.entities, runtime_config["entity_char_budget"])
-        graph_chain_payload = _budget_graph_chain_payload(
-            getattr(bundle, "graph_chains", []) or [],
-            runtime_config["graph_char_budget"],
-        )
-        evidence_payload = _budget_evidence_payload(bundle.evidence, runtime_config["evidence_char_budget"])
-        prompt_bundle = AgentPromptBundle(
-            prior_context=prior_context,
-            profile_summary=profile_summary_payload,
-            session_summary=session_summary,
-            chunk_payload=chunk_payload,
-            asset_payload=asset_payload,
-            sensor_payload=sensor_payload,
-            assertion_payload=assertion_payload,
-            entity_payload=entity_payload,
-            graph_chain_payload=graph_chain_payload,
-            evidence_payload=evidence_payload,
-            stats={},
-        )
-        original_counts = {
-            "history_messages": len(prompt_bundle.prior_context),
-            "profile_topics": len((prompt_bundle.profile_summary or {}).get("recurring_topics") or []),
-            "session_facts": len((prompt_bundle.session_summary or {}).get("stable_facts") or []),
-            "chunks": len(prompt_bundle.chunk_payload),
-            "assets": len(prompt_bundle.asset_payload),
-            "sensor_rows": len(prompt_bundle.sensor_payload),
-            "assertions": len(prompt_bundle.assertion_payload),
-            "entities": len(prompt_bundle.entity_payload),
-            "graph_chains": len(prompt_bundle.graph_chain_payload),
-            "evidence": len(prompt_bundle.evidence_payload),
-        }
-        prompt_bundle = _fit_prompt_bundle(question, normalized_query, question_type, prompt_bundle, runtime_config)
-        prompt_bundle.stats = {
-            "question": question,
-            "normalized_query": normalized_query,
-            "question_type": question_type,
-            "budgets": {
-                "prompt_chars": runtime_config["prompt_char_budget"],
-                "history_chars": runtime_config["history_char_budget"],
-                "profile_chars": runtime_config["profile_char_budget"],
-                "memory_chars": runtime_config["memory_char_budget"],
-                "chunk_chars": runtime_config["chunk_char_budget"],
-                "asset_chars": runtime_config["asset_char_budget"],
-                "sensor_chars": runtime_config["sensor_char_budget"],
-                "assertion_chars": runtime_config["assertion_char_budget"],
-                "entity_chars": runtime_config["entity_char_budget"],
-                "graph_chars": runtime_config["graph_char_budget"],
-                "evidence_chars": runtime_config["evidence_char_budget"],
-            },
-            "counts": {
-                "history_messages": len(prompt_bundle.prior_context),
-                "profile_topics": len((prompt_bundle.profile_summary or {}).get("recurring_topics") or []),
-                "session_facts": len((prompt_bundle.session_summary or {}).get("stable_facts") or []),
-                "chunks": len(prompt_bundle.chunk_payload),
-                "assets": len(prompt_bundle.asset_payload),
-                "sensor_rows": len(prompt_bundle.sensor_payload),
-                "assertions": len(prompt_bundle.assertion_payload),
-                "entities": len(prompt_bundle.entity_payload),
-                "graph_chains": len(prompt_bundle.graph_chain_payload),
-                "evidence": len(prompt_bundle.evidence_payload),
-            },
-            "trimmed": {
-                "history_messages": max(0, original_counts["history_messages"] - len(prompt_bundle.prior_context)),
-                "profile_topics": max(0, original_counts["profile_topics"] - len((prompt_bundle.profile_summary or {}).get("recurring_topics") or [])),
-                "session_facts": max(0, original_counts["session_facts"] - len((prompt_bundle.session_summary or {}).get("stable_facts") or [])),
-                "chunks": max(0, original_counts["chunks"] - len(prompt_bundle.chunk_payload)),
-                "assets": max(0, original_counts["assets"] - len(prompt_bundle.asset_payload)),
-                "sensor_rows": max(0, original_counts["sensor_rows"] - len(prompt_bundle.sensor_payload)),
-                "assertions": max(0, original_counts["assertions"] - len(prompt_bundle.assertion_payload)),
-                "entities": max(0, original_counts["entities"] - len(prompt_bundle.entity_payload)),
-                "graph_chains": max(0, original_counts["graph_chains"] - len(prompt_bundle.graph_chain_payload)),
-                "evidence": max(0, original_counts["evidence"] - len(prompt_bundle.evidence_payload)),
-            },
-            "memory_relevance": {
-                "profile_topics": max(0, pre_gated_memory_counts["profile_topics"] - len((prompt_bundle.profile_summary or {}).get("recurring_topics") or [])),
-                "profile_goals": max(0, pre_gated_memory_counts["profile_goals"] - len((prompt_bundle.profile_summary or {}).get("learning_goals") or [])),
-                "session_facts": max(0, pre_gated_memory_counts["session_facts"] - len((prompt_bundle.session_summary or {}).get("stable_facts") or [])),
-                "open_threads": max(0, pre_gated_memory_counts["open_threads"] - len((prompt_bundle.session_summary or {}).get("open_threads") or [])),
-                "resolved_threads": max(0, pre_gated_memory_counts["resolved_threads"] - len((prompt_bundle.session_summary or {}).get("resolved_threads") or [])),
-            },
-            "estimated_chars": {
-                "history": _estimate_json_chars(prompt_bundle.prior_context),
-                "profile_summary": _estimate_json_chars(prompt_bundle.profile_summary or {}),
-                "session_summary": _estimate_json_chars(prompt_bundle.session_summary or {}),
-                "chunks": _estimate_json_chars(prompt_bundle.chunk_payload),
-                "assets": _estimate_json_chars(prompt_bundle.asset_payload),
-                "sensor_rows": _estimate_json_chars(prompt_bundle.sensor_payload),
-                "assertions": _estimate_json_chars(prompt_bundle.assertion_payload),
-                "entities": _estimate_json_chars(prompt_bundle.entity_payload),
-                "graph_chains": _estimate_json_chars(prompt_bundle.graph_chain_payload),
-                "evidence": _estimate_json_chars(prompt_bundle.evidence_payload),
-                "total_prompt": _estimate_prompt_chars(question, normalized_query, question_type, prompt_bundle, runtime_config),
-            },
-            "final_ids": {
-                "chunk_ids": [item["chunk_id"] for item in prompt_bundle.chunk_payload],
-                "asset_ids": [item["asset_id"] for item in prompt_bundle.asset_payload],
-                "sensor_row_ids": [item["sensor_row_id"] for item in prompt_bundle.sensor_payload],
-                "assertion_ids": [item["assertion_id"] for item in prompt_bundle.assertion_payload],
-                "entity_ids": [item["entity_id"] for item in prompt_bundle.entity_payload],
-                "graph_chain_ids": [item["chain_id"] for item in prompt_bundle.graph_chain_payload],
-                "evidence_ids": [item["evidence_id"] for item in prompt_bundle.evidence_payload],
-            },
-            "profile_used": bool(prompt_bundle.profile_summary),
-            "session_memory_used": bool(prompt_bundle.session_summary),
-        }
-        return prompt_bundle
 
     def _generate_answer(
         self,
@@ -2143,13 +2067,23 @@ class AgentService:
             raise AgentQueryError("AGENT_API_KEY is required for agent answers")
 
         system_prompt = runtime_config["system_prompt"]
-        user_prompt = _build_user_prompt(question, normalized_query, question_type, prompt_bundle)
+        user_prompt = _prompt_builder().build_user_prompt(
+            question=question,
+            normalized_query=normalized_query,
+            question_type=question_type,
+            prompt_bundle=prompt_bundle,
+        )
         payload = _build_chat_payload(system_prompt, user_prompt, prompt_bundle, runtime_config)
         while _estimate_request_chars(payload) > runtime_config["prompt_char_budget"]:
             if not _shrink_prompt_bundle_once(prompt_bundle):
                 break
             prompt_bundle.stats["request_trimmed"] = True
-            user_prompt = _build_user_prompt(question, normalized_query, question_type, prompt_bundle)
+            user_prompt = _prompt_builder().build_user_prompt(
+                question=question,
+                normalized_query=normalized_query,
+                question_type=question_type,
+                prompt_bundle=prompt_bundle,
+            )
             payload = _build_chat_payload(system_prompt, user_prompt, prompt_bundle, runtime_config)
         if _estimate_request_chars(payload) > runtime_config["prompt_char_budget"]:
             raise AgentQueryError("Prompt budget exceeded after trimming")
@@ -2271,7 +2205,7 @@ class AgentService:
         model = str(runtime_config.get("model") or "").strip()
         if not model:
             raise AgentQueryError("Open-world fallback model is not configured")
-        user_payload = _build_open_world_user_payload(
+        user_payload = _prompt_builder().build_open_world_user_payload(
             question=question,
             normalized_query=normalized_query,
             question_type=question_type,
@@ -2458,7 +2392,7 @@ class AgentService:
         model_abstained = bool(response.get("abstained", False))
         abstained = model_abstained
         abstain_reason: str | None = None
-        grounding_check = _verify_answer_grounding(
+        grounding_check = _answer_verifier().verify_answer_grounding(
             answer=answer,
             question_type=question_type,
             normalized_query=normalized_query,
@@ -2898,198 +2832,19 @@ def _compose_extractive_fallback_answer(
     question_type: str,
     citations: list[dict[str, Any]],
 ) -> str:
-    normalized_query = _normalize_query(question).lower()
-    keywords = {token for token in re.split(r"[^a-z0-9]+", normalized_query) if len(token) >= 4}
-    scored_sentences: list[tuple[int, str]] = []
-    seen: set[str] = set()
-    for citation in citations[:4]:
-        quote = sanitize_text(str(citation.get("quote") or "")).strip()
-        if not quote:
-            continue
-        sentences = [sentence.strip() for sentence in re.split(r"(?<=[\.\!\?])\s+", quote) if sentence.strip()]
-        for index, sentence in enumerate(sentences[:4]):
-            cleaned = re.sub(r"\s+", " ", sentence).strip(" :;,-")
-            if len(cleaned) < 24:
-                continue
-            fingerprint = cleaned.lower()
-            if fingerprint in seen:
-                continue
-            seen.add(fingerprint)
-            score = 0
-            if index == 0:
-                score += 2
-            score += sum(1 for token in keywords if token in fingerprint)
-            scored_sentences.append((score, cleaned))
-    scored_sentences.sort(key=lambda item: (-item[0], len(item[1])))
-    selected = [sentence for _, sentence in scored_sentences[:3]]
-    if not selected:
-        return ""
-    if question_type in {"definition", "fact", "explanation", "comparison", "procedure"}:
-        return " ".join(selected).strip()
-    return " ".join(selected[:2]).strip()
+    return _answer_verifier().compose_extractive_fallback_answer(
+        question=question,
+        question_type=question_type,
+        citations=citations,
+    )
 
 
 def _mark_selected_sources_for_prompt(sources: list[dict[str, Any]], prompt_bundle: AgentPromptBundle) -> list[dict[str, Any]]:
-    selected_chunk_ids = {item["chunk_id"] for item in prompt_bundle.chunk_payload}
-    selected_asset_ids = {item["asset_id"] for item in prompt_bundle.asset_payload}
-    selected_sensor_row_ids = {item["sensor_row_id"] for item in prompt_bundle.sensor_payload}
-    selected_assertion_ids = {item["assertion_id"] for item in prompt_bundle.assertion_payload}
-    selected_entity_ids = {item["entity_id"] for item in prompt_bundle.entity_payload}
-    selected_evidence_ids = {item["evidence_id"] for item in prompt_bundle.evidence_payload}
-    finalized: list[dict[str, Any]] = []
-    for source in sources:
-        item = dict(source)
-        kind = str(item.get("source_kind") or "")
-        selected = False
-        if kind == "chunk":
-            selected = str(item.get("chunk_id") or "") in selected_chunk_ids
-        elif kind == "asset_hit":
-            selected = str(item.get("asset_id") or "") in selected_asset_ids
-        elif kind == "asset_link":
-            selected = (
-                str(item.get("chunk_id") or "") in selected_chunk_ids
-                and str(item.get("asset_id") or "") in selected_asset_ids
-            )
-        elif kind == "sensor":
-            selected = str(item.get("sensor_row_id") or item.get("source_id") or "") in selected_sensor_row_ids
-        elif kind == "assertion":
-            selected = str(item.get("assertion_id") or "") in selected_assertion_ids
-        elif kind == "entity":
-            selected = str(item.get("entity_id") or "") in selected_entity_ids
-        elif kind == "evidence":
-            selected = str(item.get("evidence_id") or item.get("source_id") or "") in selected_evidence_ids
-        item["selected"] = selected
-        finalized.append(item)
-    return finalized
+    return _prompt_builder().mark_selected_sources_for_prompt(sources, prompt_bundle)
 
 
 def _trim_context_bundle_to_prompt(bundle: AgentContextBundle, prompt_bundle: AgentPromptBundle) -> AgentContextBundle:
-    selected_chunk_ids = {item["chunk_id"] for item in prompt_bundle.chunk_payload}
-    selected_asset_ids = {item["asset_id"] for item in prompt_bundle.asset_payload}
-    selected_sensor_row_ids = {item["sensor_row_id"] for item in prompt_bundle.sensor_payload}
-    selected_assertion_ids = {item["assertion_id"] for item in prompt_bundle.assertion_payload}
-    selected_entity_ids = {item["entity_id"] for item in prompt_bundle.entity_payload}
-    selected_graph_chain_ids = {item["chain_id"] for item in prompt_bundle.graph_chain_payload}
-    selected_evidence_ids = {item["evidence_id"] for item in prompt_bundle.evidence_payload}
-    final_sources = _mark_selected_sources_for_prompt(bundle.sources, prompt_bundle)
-    existing_chunk_ids = {
-        str(item.get("chunk_id") or "")
-        for item in final_sources
-        if item.get("source_kind") == "chunk" and str(item.get("chunk_id") or "")
-    }
-    existing_asset_ids = {
-        str(item.get("asset_id") or item.get("source_id") or "")
-        for item in final_sources
-        if item.get("source_kind") == "asset_hit" and str(item.get("asset_id") or item.get("source_id") or "")
-    }
-    existing_sensor_row_ids = {
-        str(item.get("sensor_row_id") or item.get("source_id") or "")
-        for item in final_sources
-        if item.get("source_kind") == "sensor" and str(item.get("sensor_row_id") or item.get("source_id") or "")
-    }
-    existing_evidence_ids = {
-        str(item.get("evidence_id") or item.get("source_id") or "")
-        for item in final_sources
-        if item.get("source_kind") == "evidence" and str(item.get("evidence_id") or item.get("source_id") or "")
-    }
-    for row in bundle.chunks:
-        chunk_id = row["chunk_id"]
-        if chunk_id not in selected_chunk_ids or chunk_id in existing_chunk_ids:
-            continue
-        final_sources.append(
-            {
-                "source_kind": "chunk",
-                "source_id": chunk_id,
-                "document_id": row.get("document_id"),
-                "chunk_id": chunk_id,
-                "rank": None,
-                "score": float(row.get("_retrieval_score") or 0.0),
-                "selected": True,
-                "payload": {
-                    "derived_from": "final_context_bundle",
-                    "page_start": row.get("page_start"),
-                    "page_end": row.get("page_end"),
-                },
-            }
-        )
-    for row in bundle.assets:
-        asset_id = row["asset_id"]
-        if asset_id not in selected_asset_ids or asset_id in existing_asset_ids:
-            continue
-        final_sources.append(
-            {
-                "source_kind": "asset_hit",
-                "source_id": asset_id,
-                "document_id": row.get("document_id"),
-                "chunk_id": None,
-                "asset_id": asset_id,
-                "rank": None,
-                "score": float(row.get("_retrieval_score") or 0.0),
-                "selected": True,
-                "payload": {
-                    "derived_from": "final_context_bundle",
-                    "page_number": row.get("page_number"),
-                    "asset_type": row.get("asset_type"),
-                },
-            }
-        )
-    for row in bundle.sensor_rows:
-        sensor_row_id = str(row.get("sensor_row_id") or "")
-        if not sensor_row_id or sensor_row_id not in selected_sensor_row_ids or sensor_row_id in existing_sensor_row_ids:
-            continue
-        final_sources.append(
-            {
-                "source_kind": "sensor",
-                "source_id": sensor_row_id,
-                "document_id": None,
-                "chunk_id": None,
-                "sensor_row_id": sensor_row_id,
-                "sensor_id": row.get("sensor_id"),
-                "rank": None,
-                "score": float(row.get("_relevance_score") or 0.0),
-                "selected": True,
-                "payload": {
-                    "derived_from": "final_context_bundle",
-                    "metric_name": row.get("metric_name"),
-                    "latest_observed_at": row.get("latest_observed_at"),
-                },
-            }
-        )
-    for row in bundle.evidence:
-        evidence_id = str(row.get("evidence_id") or "")
-        if not evidence_id or evidence_id not in selected_evidence_ids or evidence_id in existing_evidence_ids:
-            continue
-        final_sources.append(
-            {
-                "source_kind": "evidence",
-                "source_id": evidence_id,
-                "document_id": None,
-                "chunk_id": None,
-                "evidence_id": evidence_id,
-                "rank": None,
-                "score": None,
-                "selected": True,
-                "payload": {
-                    "derived_from": "final_context_bundle",
-                    "assertion_id": row.get("assertion_id"),
-                },
-            }
-        )
-    return AgentContextBundle(
-        chunks=[row for row in bundle.chunks if row["chunk_id"] in selected_chunk_ids],
-        assets=[row for row in bundle.assets if row["asset_id"] in selected_asset_ids],
-        sensor_rows=[row for row in bundle.sensor_rows if str(row.get("sensor_row_id") or "") in selected_sensor_row_ids],
-        assertions=[row for row in bundle.assertions if row["assertion_id"] in selected_assertion_ids],
-        graph_chains=[row for row in bundle.graph_chains if str(row.get("chain_id") or "") in selected_graph_chain_ids],
-        evidence=[
-            row
-            for row in bundle.evidence
-            if str(row.get("evidence_id") or "") in selected_evidence_ids
-            or row["assertion_id"] in selected_assertion_ids
-        ],
-        entities=[row for row in bundle.entities if row["entity_id"] in selected_entity_ids],
-        sources=final_sources,
-    )
+    return _prompt_builder().trim_context_bundle_to_prompt(bundle, prompt_bundle)
 
 
 _GROUNDING_STOPWORDS = {
@@ -3241,100 +2996,18 @@ def _build_supported_subset_answer(
     grounding_check: dict[str, Any],
     question_type: str,
 ) -> tuple[str, list[str]] | None:
-    if question_type in {"source_lookup", "visual_lookup"}:
-        return None
-    claims = [item for item in (grounding_check.get("claims") or []) if isinstance(item, dict)]
-    supported_claims = [
-        str(item.get("claim") or "").strip()
-        for item in claims
-        if item.get("supported") and str(item.get("claim") or "").strip()
-    ]
-    if not supported_claims:
-        return None
-    unsupported_claims = [
-        str(item).strip()
-        for item in (grounding_check.get("unsupported_claims") or [])
-        if str(item).strip()
-    ]
-    if any(_contains_numeric_claim(claim) for claim in unsupported_claims):
-        return None
-    supported_ratio = float(grounding_check.get("supported_ratio") or 0.0)
-    if supported_ratio < 0.25:
-        return None
-    evidence_ids = list(
-        dict.fromkeys(
-            evidence_id
-            for item in claims
-            if item.get("supported")
-            for evidence_id in [str(value).strip() for value in (item.get("evidence_ids") or []) if str(value).strip()]
-        )
+    return runtime_build_supported_subset_answer(
+        grounding_check=grounding_check,
+        question_type=question_type,
     )
-    supported_text = " ".join(supported_claims[:3]).strip()
-    if not supported_text:
-        return None
-    supported_text = _clean_supported_subset_claim_text(supported_text)
-    answer = supported_text
-    return answer.strip(), evidence_ids
 
 
 def _clean_supported_subset_claim_text(text: str) -> str:
-    cleaned = str(text or "").strip()
-    cleaned = re.sub(
-        r"^(based on (the )?(provided )?(sources|indexed corpus|retrieved evidence)\s*:\s*)",
-        "",
-        cleaned,
-        flags=re.IGNORECASE,
-    )
-    cleaned = re.sub(
-        r"^(according to (the )?(provided )?(sources|indexed corpus|retrieved evidence)\s*[:,]?\s*)",
-        "",
-        cleaned,
-        flags=re.IGNORECASE,
-    )
-    cleaned = re.sub(
-        r"^(from (the )?(provided )?(sources|indexed corpus|retrieved evidence)\s*[:,]?\s*)",
-        "",
-        cleaned,
-        flags=re.IGNORECASE,
-    )
-    cleaned = re.sub(r"\s+", " ", cleaned).strip()
-    return cleaned
+    return runtime_clean_supported_subset_claim_text(text)
 
 
 def _clean_user_facing_answer_text(text: str) -> str:
-    cleaned = _clean_supported_subset_claim_text(text)
-    cleaned = re.sub(
-        r"^(i (think|believe|guess|would say)\s+)",
-        "",
-        cleaned,
-        flags=re.IGNORECASE,
-    )
-    cleaned = re.sub(
-        r"^(i('m| am) not sure(,? but)?\s+)",
-        "",
-        cleaned,
-        flags=re.IGNORECASE,
-    )
-    cleaned = re.sub(
-        r"^(it (seems|looks like|appears)\s+)",
-        "",
-        cleaned,
-        flags=re.IGNORECASE,
-    )
-    cleaned = re.sub(
-        r"^(here'?s (what|the short version|the simple version)\s*[:\-]\s*)",
-        "",
-        cleaned,
-        flags=re.IGNORECASE,
-    )
-    cleaned = re.sub(
-        r"^(in plain terms\s*[:\-]\s*)",
-        "",
-        cleaned,
-        flags=re.IGNORECASE,
-    )
-    cleaned = re.sub(r"\s+", " ", cleaned).strip()
-    return cleaned
+    return runtime_clean_user_facing_answer_text(text)
 
 
 def _verify_answer_grounding(
@@ -3353,58 +3026,22 @@ def _verify_answer_grounding(
     used_evidence_ids: list[str],
     runtime_config: dict[str, Any],
 ) -> dict[str, Any]:
-    if not answer.strip():
-        return {
-            "method": "empty_answer",
-            "passed": False,
-            "supported_ratio": 0.0,
-            "unsupported_claims": [],
-            "claims": [],
-        }
-    evidence_rows = _grounding_evidence_rows(
-        chunk_map,
-        used_chunk_ids,
-        asset_map,
-        used_asset_ids,
-        sensor_row_map,
-        used_sensor_row_ids,
-        assertion_map,
-        evidence_map,
-        used_evidence_ids,
-    )
-    lexical_result: dict[str, Any] | None = None
-    if runtime_config.get("claim_verifier_enabled", True):
-        verifier_result = _verify_answer_claims_with_model(
-            answer=answer,
-            normalized_query=normalized_query,
-            evidence_rows=evidence_rows,
-            runtime_config=runtime_config,
-        )
-        if verifier_result is not None:
-            if str(verifier_result.get("method") or "").strip() == "claim_verifier_error":
-                lexical_result = _lexical_grounding_check(
-                    answer=answer,
-                    question_type=question_type,
-                    normalized_query=normalized_query,
-                    evidence_rows=evidence_rows,
-                    runtime_config=runtime_config,
-                )
-                lexical_result["verifier_fallback_reason"] = "claim_verifier_error"
-                lexical_result["verifier_error"] = {
-                    "provider": verifier_result.get("provider"),
-                    "model": verifier_result.get("model"),
-                    "unsupported_claims": list(verifier_result.get("unsupported_claims") or [])[:6],
-                }
-                return lexical_result
-            return verifier_result
-    lexical_result = _lexical_grounding_check(
+    # Compatibility wrapper. Primary verification ownership lives in AnswerVerifier.
+    return _answer_verifier().verify_answer_grounding(
         answer=answer,
         question_type=question_type,
         normalized_query=normalized_query,
-        evidence_rows=evidence_rows,
+        chunk_map=chunk_map,
+        used_chunk_ids=used_chunk_ids,
+        asset_map=asset_map,
+        used_asset_ids=used_asset_ids,
+        sensor_row_map=sensor_row_map,
+        used_sensor_row_ids=used_sensor_row_ids,
+        assertion_map=assertion_map,
+        evidence_map=evidence_map,
+        used_evidence_ids=used_evidence_ids,
         runtime_config=runtime_config,
     )
-    return lexical_result
 
 
 def _grounding_evidence_rows(
@@ -3418,72 +3055,18 @@ def _grounding_evidence_rows(
     evidence_map: dict[str, dict[str, Any]],
     used_evidence_ids: list[str],
 ) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for chunk_id in used_chunk_ids:
-        chunk = chunk_map.get(chunk_id)
-        if not chunk:
-            continue
-        rows.append(
-            {
-                "kind": "chunk",
-                "id": chunk_id,
-                "document_id": str(chunk.get("document_id") or ""),
-                "page_start": chunk.get("page_start"),
-                "page_end": chunk.get("page_end"),
-                "text": str(chunk.get("text") or "")[:1600],
-            }
-        )
-    for asset_id in used_asset_ids:
-        asset = asset_map.get(asset_id)
-        if not asset:
-            continue
-        trusted_text = _trusted_asset_grounding_text(asset)
-        if not trusted_text:
-            continue
-        rows.append(
-            {
-                "kind": "asset",
-                "id": asset_id,
-                "document_id": str(asset.get("document_id") or ""),
-                "page_number": asset.get("page_number"),
-                "text": trusted_text[:1600],
-            }
-        )
-    for sensor_row_id in used_sensor_row_ids:
-        sensor_row = sensor_row_map.get(sensor_row_id)
-        if not sensor_row:
-            continue
-        trusted_text = _sensor_grounding_series_text(sensor_row)
-        if not trusted_text:
-            continue
-        rows.append(
-            {
-                "kind": "sensor",
-                "id": sensor_row_id,
-                "sensor_id": sensor_row.get("sensor_id"),
-                "metric_name": sensor_row.get("metric_name"),
-                "text": trusted_text[:1600],
-            }
-        )
-    for evidence_id in used_evidence_ids:
-        evidence = evidence_map.get(evidence_id)
-        if not evidence:
-            continue
-        excerpt = str(evidence.get("excerpt") or "").strip()
-        if not excerpt:
-            continue
-        assertion = assertion_map.get(str(evidence.get("assertion_id") or ""))
-        rows.append(
-            {
-                "kind": "kg_evidence",
-                "id": evidence_id,
-                "assertion_id": evidence.get("assertion_id"),
-                "document_id": str((assertion or {}).get("document_id") or ""),
-                "chunk_id": (assertion or {}).get("chunk_id"),
-                "text": excerpt[:1600],
-            }
-        )
-    return rows
+    # Compatibility wrapper. Primary verification ownership lives in AnswerVerifier.
+    return _answer_verifier().grounding_evidence_rows(
+        chunk_map=chunk_map,
+        used_chunk_ids=used_chunk_ids,
+        asset_map=asset_map,
+        used_asset_ids=used_asset_ids,
+        sensor_row_map=sensor_row_map,
+        used_sensor_row_ids=used_sensor_row_ids,
+        assertion_map=assertion_map,
+        evidence_map=evidence_map,
+        used_evidence_ids=used_evidence_ids,
+    )
 
 
 def _verify_answer_claims_with_model(
@@ -3493,142 +3076,18 @@ def _verify_answer_claims_with_model(
     evidence_rows: list[dict[str, Any]],
     runtime_config: dict[str, Any],
 ) -> dict[str, Any] | None:
-    provider = str(runtime_config.get("claim_verifier_provider") or runtime_config.get("provider") or "").strip().lower()
-    if provider not in {"", "auto", "openai"}:
-        return None
-    api_key = runtime_config.get("api_key_override") or settings.agent_api_key
-    if not api_key or not evidence_rows:
-        return None
-    model = str(runtime_config.get("claim_verifier_model") or "").strip()
-    if not model:
-        return None
-    payload = _build_model_json_payload(
-        model=model,
-        reasoning_effort=str(runtime_config.get("claim_verifier_reasoning_effort") or "none"),
-        system_prompt=str(runtime_config.get("claim_verifier_system_prompt") or "").strip(),
-        user_payload={
-            "question": normalized_query,
-            "answer": answer,
-            "evidence_rows": evidence_rows,
-        },
-        schema_name="claim_verifier_result",
-        schema=_claim_verifier_schema(),
-        temperature=float(runtime_config.get("claim_verifier_temperature") or 0.0),
-        max_completion_tokens=int(runtime_config.get("claim_verifier_max_completion_tokens") or 500),
+    # Compatibility wrapper. Primary verification ownership lives in AnswerVerifier.
+    return _base_answer_verifier().verify_answer_claims_with_model(
+        answer=answer,
+        normalized_query=normalized_query,
+        evidence_rows=evidence_rows,
+        runtime_config=runtime_config,
     )
-    base_url = str(runtime_config.get("claim_verifier_base_url") or runtime_config.get("base_url") or settings.agent_base_url).rstrip("/")
-    try:
-        body = _call_openai_json_payload(
-            base_url=base_url,
-            api_key=str(api_key),
-            payload=payload,
-            timeout_seconds=float(runtime_config.get("claim_verifier_timeout_seconds") or 25.0),
-        )
-        content = _extract_message_content(body)
-        data = json.loads(content)
-        expected_claims = _split_grounding_claims(answer)
-        allowed_evidence_ids = {str(item.get("id") or "") for item in evidence_rows if str(item.get("id") or "")}
-        claims: list[dict[str, Any]] = []
-        unsupported_claims: list[str] = [str(item).strip() for item in (data.get("unsupported_claims") or []) if str(item).strip()]
-        supported_claim_count = 0
-        for item in (data.get("claims") or []):
-            if not isinstance(item, dict):
-                continue
-            claim_text = str(item.get("claim") or "").strip()
-            evidence_ids = [
-                evidence_id
-                for evidence_id in [str(value).strip() for value in (item.get("evidence_ids") or []) if str(value).strip()]
-                if evidence_id in allowed_evidence_ids
-            ]
-            support_basis = str(item.get("support_basis") or "").strip().lower()
-            evidence_supported = bool(item.get("supported")) and bool(evidence_ids)
-            world_knowledge_supported = (
-                bool(item.get("supported"))
-                and support_basis == "world_knowledge"
-                and not evidence_ids
-                and not _contains_numeric_claim(claim_text)
-            )
-            supported = evidence_supported or world_knowledge_supported
-            if supported:
-                supported_claim_count += 1
-            elif claim_text and claim_text not in unsupported_claims:
-                unsupported_claims.append(claim_text)
-            claims.append(
-                {
-                    "claim": claim_text,
-                    "supported": supported,
-                    "evidence_ids": evidence_ids,
-                    "support_basis": "evidence" if evidence_supported else ("world_knowledge" if world_knowledge_supported else "unsupported"),
-                }
-            )
-        observed_claim_count = len([item for item in claims if str(item.get("claim") or "").strip()])
-        expected_claim_count = max(1, len(expected_claims))
-        claim_coverage_ratio = round(observed_claim_count / max(1, expected_claim_count), 4)
-        supported_ratio = round(supported_claim_count / max(1, len(claims)), 4) if claims else 0.0
-        min_supported_ratio = float(runtime_config.get("claim_verifier_min_supported_ratio") or 0.66)
-        min_claim_coverage = 1.0 if expected_claim_count <= 2 else 0.75
-        passed = (
-            bool(data.get("verdict", False))
-            and bool(claims)
-            and supported_claim_count >= 1
-            and supported_ratio >= min_supported_ratio
-            and claim_coverage_ratio >= min_claim_coverage
-            and not unsupported_claims
-        )
-        return {
-            "method": "claim_verifier",
-            "passed": passed,
-            "supported_ratio": supported_ratio,
-            "unsupported_claims": unsupported_claims[:6],
-            "claims": claims[:8],
-            "world_knowledge_claims": [
-                item["claim"]
-                for item in claims
-                if str(item.get("support_basis") or "") == "world_knowledge"
-            ][:6],
-            "expected_claim_count": expected_claim_count,
-            "observed_claim_count": observed_claim_count,
-            "claim_coverage_ratio": claim_coverage_ratio,
-            "provider": provider or "openai",
-            "model": model,
-        }
-    except Exception:
-        return {
-            "method": "claim_verifier_error",
-            "passed": False,
-            "supported_ratio": 0.0,
-            "unsupported_claims": ["claim_verifier_request_failed"],
-            "claims": [],
-            "provider": provider or "openai",
-            "model": model,
-        }
 
 
 def _claim_verifier_schema() -> dict[str, Any]:
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "claims": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {
-                        "claim": {"type": "string"},
-                        "supported": {"type": "boolean"},
-                        "evidence_ids": {"type": "array", "items": {"type": "string"}},
-                        "support_basis": {"type": "string", "enum": ["evidence", "world_knowledge", "unsupported"]},
-                    },
-                    "required": ["claim", "supported", "evidence_ids", "support_basis"],
-                },
-            },
-            "unsupported_claims": {"type": "array", "items": {"type": "string"}},
-            "supported_ratio": {"type": "number"},
-            "verdict": {"type": "boolean"},
-        },
-        "required": ["claims", "unsupported_claims", "supported_ratio", "verdict"],
-    }
+    # Compatibility wrapper. Primary verification ownership lives in AnswerVerifier.
+    return runtime_claim_verifier_schema()
 
 
 def _budget_prior_messages(messages: list[dict[str, Any]], char_budget: int) -> list[dict[str, Any]]:
@@ -3908,336 +3367,21 @@ def _fit_prompt_bundle(
     prompt_bundle: AgentPromptBundle,
     runtime_config: dict[str, Any],
 ) -> AgentPromptBundle:
-    while _estimate_prompt_chars(question, normalized_query, question_type, prompt_bundle, runtime_config) > runtime_config["prompt_char_budget"]:
-        if prompt_bundle.profile_summary and (prompt_bundle.profile_summary.get("recurring_topics") or prompt_bundle.profile_summary.get("persistent_constraints")):
-            if _shrink_prompt_bundle_once(prompt_bundle):
-                continue
-        if prompt_bundle.session_summary and (prompt_bundle.session_summary.get("open_threads") or prompt_bundle.session_summary.get("stable_facts")):
-            if _shrink_prompt_bundle_once(prompt_bundle):
-                continue
-        if prompt_bundle.graph_chain_payload:
-            prompt_bundle.graph_chain_payload.pop()
-            continue
-        if prompt_bundle.evidence_payload:
-            prompt_bundle.evidence_payload.pop()
-            continue
-        if prompt_bundle.sensor_payload:
-            prompt_bundle.sensor_payload.pop()
-            continue
-        if prompt_bundle.asset_payload:
-            prompt_bundle.asset_payload.pop()
-            continue
-        if prompt_bundle.entity_payload:
-            prompt_bundle.entity_payload.pop()
-            continue
-        if prompt_bundle.assertion_payload:
-            prompt_bundle.assertion_payload.pop()
-            continue
-        if len(prompt_bundle.chunk_payload) > 1:
-            prompt_bundle.chunk_payload.pop()
-            continue
-        if len(prompt_bundle.prior_context) > 1:
-            prompt_bundle.prior_context.pop(0)
-            continue
-        if _truncate_prompt_bundle_once(prompt_bundle):
-            continue
-        break
-    return prompt_bundle
+    return _prompt_builder().fit_prompt_bundle(
+        question=question,
+        normalized_query=normalized_query,
+        question_type=question_type,
+        prompt_bundle=prompt_bundle,
+        runtime_config=runtime_config,
+    )
 
 
 def _shrink_prompt_bundle_once(prompt_bundle: AgentPromptBundle) -> bool:
-    if prompt_bundle.profile_summary:
-        profile = dict(prompt_bundle.profile_summary)
-        recurring_topics = list(profile.get("recurring_topics") or [])
-        if recurring_topics:
-            recurring_topics.pop()
-            profile["recurring_topics"] = recurring_topics
-            prompt_bundle.profile_summary = _refresh_profile_summary_text(profile)
-            return True
-        persistent_constraints = list(profile.get("persistent_constraints") or [])
-        if persistent_constraints:
-            persistent_constraints.pop()
-            profile["persistent_constraints"] = persistent_constraints
-            prompt_bundle.profile_summary = _refresh_profile_summary_text(profile)
-            return True
-    if prompt_bundle.session_summary:
-        summary = dict(prompt_bundle.session_summary)
-        open_threads = list(summary.get("open_threads") or [])
-        if open_threads:
-            open_threads.pop()
-            summary["open_threads"] = open_threads
-            prompt_bundle.session_summary = _refresh_memory_summary_text(summary)
-            return True
-        facts = list(summary.get("stable_facts") or [])
-        if len(facts) > 1:
-            facts.pop()
-            summary["stable_facts"] = facts
-            prompt_bundle.session_summary = _refresh_memory_summary_text(summary)
-            return True
-    if prompt_bundle.graph_chain_payload:
-        prompt_bundle.graph_chain_payload.pop()
-        return True
-    if prompt_bundle.evidence_payload:
-        prompt_bundle.evidence_payload.pop()
-        return True
-    if prompt_bundle.sensor_payload:
-        prompt_bundle.sensor_payload.pop()
-        return True
-    if prompt_bundle.asset_payload:
-        prompt_bundle.asset_payload.pop()
-        return True
-    if prompt_bundle.entity_payload:
-        prompt_bundle.entity_payload.pop()
-        return True
-    if prompt_bundle.assertion_payload:
-        prompt_bundle.assertion_payload.pop()
-        return True
-    if len(prompt_bundle.chunk_payload) > 1:
-        prompt_bundle.chunk_payload.pop()
-        return True
-    if len(prompt_bundle.prior_context) > 1:
-        prompt_bundle.prior_context.pop(0)
-        return True
-    return _truncate_prompt_bundle_once(prompt_bundle)
+    return _prompt_builder().shrink_prompt_bundle_once(prompt_bundle)
 
 
 def _truncate_prompt_bundle_once(prompt_bundle: AgentPromptBundle) -> bool:
-    if prompt_bundle.profile_summary:
-        summary_text = str((prompt_bundle.profile_summary or {}).get("summary_text") or "")
-        if len(summary_text) > 140:
-            prompt_bundle.profile_summary = {
-                **prompt_bundle.profile_summary,
-                "summary_text": summary_text[: max(140, len(summary_text) // 2)].rstrip() + "...",
-            }
-            return True
-    if prompt_bundle.session_summary:
-        summary_text = str((prompt_bundle.session_summary or {}).get("summary_text") or "")
-        if len(summary_text) > 160:
-            prompt_bundle.session_summary = {
-                **prompt_bundle.session_summary,
-                "summary_text": summary_text[: max(160, len(summary_text) // 2)].rstrip() + "...",
-            }
-            return True
-    for payload in (
-        prompt_bundle.graph_chain_payload,
-        prompt_bundle.evidence_payload,
-        prompt_bundle.sensor_payload,
-        prompt_bundle.asset_payload,
-        prompt_bundle.chunk_payload,
-        prompt_bundle.assertion_payload,
-    ):
-        if not payload:
-            continue
-        candidate = payload[-1]
-        for field_name, min_len in (("text", 120), ("summary_text", 120), ("excerpt", 80), ("object_literal", 80)):
-            value = candidate.get(field_name)
-            if isinstance(value, str) and len(value) > min_len:
-                candidate[field_name] = value[: max(min_len, len(value) // 2)].rstrip() + "..."
-                candidate["truncated"] = True
-                return True
-    if prompt_bundle.prior_context:
-        candidate = prompt_bundle.prior_context[0]
-        content = str(candidate.get("content") or "")
-        if len(content) > 120:
-            candidate["content"] = "..." + content[-max(120, len(content) // 2):]
-            return True
-    return False
-
-
-def _build_user_prompt(
-    question: str,
-    normalized_query: str,
-    question_type: str,
-    prompt_bundle: AgentPromptBundle,
-) -> str:
-    return "\n".join(
-        [
-            f"question_type: {question_type}",
-            f"question: {question}",
-            f"normalized_query: {normalized_query}",
-            f"allowed_chunk_ids: {json.dumps([item['chunk_id'] for item in prompt_bundle.chunk_payload], ensure_ascii=False)}",
-            f"allowed_asset_ids: {json.dumps([item['asset_id'] for item in prompt_bundle.asset_payload], ensure_ascii=False)}",
-            f"allowed_sensor_row_ids: {json.dumps([item['sensor_row_id'] for item in prompt_bundle.sensor_payload], ensure_ascii=False)}",
-            f"allowed_assertion_ids: {json.dumps([item['assertion_id'] for item in prompt_bundle.assertion_payload], ensure_ascii=False)}",
-            f"allowed_entity_ids: {json.dumps([item['entity_id'] for item in prompt_bundle.entity_payload], ensure_ascii=False)}",
-            f"allowed_evidence_ids: {json.dumps([item['evidence_id'] for item in prompt_bundle.evidence_payload], ensure_ascii=False)}",
-            "Use graph chains only as structural support. When they help, cite the underlying assertion ids and evidence ids rather than the chain itself.",
-            "Return only the chunk ids, asset ids, sensor row ids, and evidence ids you actually used in used_chunk_ids, used_asset_ids, used_sensor_row_ids, and used_evidence_ids. Do not write source quotes.",
-            f"context_chunks: {json.dumps(_json_safe(prompt_bundle.chunk_payload), ensure_ascii=False)}",
-            f"context_assets: {json.dumps(_json_safe(prompt_bundle.asset_payload), ensure_ascii=False)}",
-            f"context_sensors: {json.dumps(_json_safe(prompt_bundle.sensor_payload), ensure_ascii=False)}",
-            f"context_assertions: {json.dumps(_json_safe(prompt_bundle.assertion_payload), ensure_ascii=False)}",
-            f"context_entities: {json.dumps(_json_safe(prompt_bundle.entity_payload), ensure_ascii=False)}",
-            f"context_graph_chains: {json.dumps(_json_safe(prompt_bundle.graph_chain_payload), ensure_ascii=False)}",
-            f"context_evidence: {json.dumps(_json_safe(prompt_bundle.evidence_payload), ensure_ascii=False)}",
-            f"context_budget: {json.dumps(_json_safe(prompt_bundle.stats), ensure_ascii=False)}",
-        ]
-    )
-
-
-def _build_open_world_user_payload(
-    *,
-    question: str,
-    normalized_query: str,
-    question_type: str,
-    bundle: AgentContextBundle,
-) -> dict[str, Any]:
-    return {
-        "question": question,
-        "normalized_query": normalized_query,
-        "question_type": question_type,
-        "policy": {
-            "may_use_general_world_knowledge": True,
-            "do_not_claim_corpus_provenance_without_support": True,
-            "prefer_context_hints_when_relevant": True,
-            "do_not_abstain_if_a_helpful_best_effort_answer_is_possible": True,
-        },
-        "context_hints": {
-            "chunks": [
-                {
-                    "chunk_id": row["chunk_id"],
-                    "section_title": str((row.get("metadata_json") or {}).get("section_title") or ""),
-                    "excerpt": _extract_citation_excerpt(str(row.get("text") or ""), normalized_query, 220),
-                }
-                for row in list(bundle.chunks or [])[:2]
-            ],
-            "assertions": [
-                {
-                    "assertion_id": row["assertion_id"],
-                    "subject_entity_id": str(row.get("subject_entity_id") or ""),
-                    "predicate": str(row.get("predicate") or ""),
-                    "object_entity_id": str(row.get("object_entity_id") or ""),
-                    "object_literal": str(row.get("object_literal") or ""),
-                }
-                for row in list(bundle.assertions or [])[:3]
-            ],
-            "assets": [
-                {
-                    "asset_id": row["asset_id"],
-                    "label": str((row.get("metadata_json") or {}).get("label") or ""),
-                    "excerpt": _extract_citation_excerpt(_trusted_asset_grounding_text(row), normalized_query, 180),
-                }
-                for row in list(bundle.assets or [])[:2]
-                if _trusted_asset_grounding_text(row)
-            ],
-            "sensors": [
-                {
-                    "sensor_row_id": str(row.get("sensor_row_id") or ""),
-                    "sensor_name": str(row.get("sensor_name") or ""),
-                    "metric_name": str(row.get("metric_name") or ""),
-                    "summary_text": _extract_citation_excerpt(_trusted_sensor_grounding_text(row), normalized_query, 180),
-                }
-                for row in list(bundle.sensor_rows or [])[:2]
-                if _trusted_sensor_grounding_text(row)
-            ],
-        },
-    }
-
-
-def _build_chat_payload(
-    system_prompt: str,
-    user_prompt: str,
-    prompt_bundle: AgentPromptBundle,
-    runtime_config: dict[str, Any],
-) -> dict[str, Any]:
-    model = str(runtime_config["model"] or "")
-    reasoning_effort = str(runtime_config["reasoning_effort"] or "")
-    messages = [{"role": "system", "content": system_prompt}]
-    if prompt_bundle.profile_summary:
-        messages.append(
-            {
-                "role": "system",
-                "content": "user_profile: " + json.dumps(_json_safe(prompt_bundle.profile_summary), ensure_ascii=False),
-            }
-        )
-    if prompt_bundle.session_summary:
-        messages.append(
-            {
-                "role": "system",
-                "content": "session_memory: " + json.dumps(_json_safe(prompt_bundle.session_summary), ensure_ascii=False),
-            }
-        )
-    payload = {
-        "model": model,
-        "reasoning_effort": reasoning_effort,
-        "messages": [*messages, *prompt_bundle.prior_context, {"role": "user", "content": user_prompt}],
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "agent_query_result",
-                "strict": True,
-                "schema": _agent_response_schema(),
-            },
-        },
-    }
-    if runtime_config["temperature"] > 0 and _supports_temperature(model, reasoning_effort):
-        payload["temperature"] = runtime_config["temperature"]
-    if runtime_config["max_completion_tokens"] > 0:
-        payload["max_completion_tokens"] = runtime_config["max_completion_tokens"]
-    return payload
-
-
-def _build_plaintext_recovery_payload(
-    payload: dict[str, Any],
-    *,
-    instruction: str,
-) -> dict[str, Any]:
-    messages = list(payload.get("messages") or [])
-    insert_index = 1 if messages and messages[0].get("role") == "system" else 0
-    messages.insert(
-        insert_index,
-        {
-            "role": "system",
-            "content": instruction,
-        },
-    )
-    recovery_payload = {
-        key: value
-        for key, value in payload.items()
-        if key != "response_format"
-    }
-    recovery_payload["messages"] = messages
-    return recovery_payload
-
-
-def _with_model_override(payload: dict[str, Any], model: str, reasoning_effort: str) -> dict[str, Any]:
-    updated = {**payload, "model": model, "reasoning_effort": reasoning_effort}
-    if "temperature" in updated and not _supports_temperature(model, reasoning_effort):
-        updated.pop("temperature", None)
-    return updated
-
-
-def _recover_nonempty_text_content(
-    *,
-    base_url: str,
-    api_key: str,
-    timeout_seconds: float,
-    primary_payload: dict[str, Any],
-    fallback_model: str,
-    fallback_reasoning_effort: str,
-) -> tuple[str, dict[str, Any], str]:
-    body = _call_openai_json_payload(
-        base_url=base_url,
-        api_key=api_key,
-        payload=primary_payload,
-        timeout_seconds=timeout_seconds,
-    )
-    content = _extract_message_content(body)
-    if str(content or "").strip():
-        return content, body, str(primary_payload.get("model") or "")
-    fallback_model = str(fallback_model or "").strip()
-    if fallback_model and fallback_model != str(primary_payload.get("model") or "").strip():
-        fallback_payload = _with_model_override(primary_payload, fallback_model, fallback_reasoning_effort)
-        body = _call_openai_json_payload(
-            base_url=base_url,
-            api_key=api_key,
-            payload=fallback_payload,
-            timeout_seconds=timeout_seconds,
-        )
-        content = _extract_message_content(body)
-        if str(content or "").strip():
-            return content, body, fallback_model
-    raise AgentQueryError("Agent answer returned empty content")
+    return _prompt_builder().truncate_prompt_bundle_once(prompt_bundle)
 
 
 def _estimate_prompt_chars(
@@ -4247,24 +3391,17 @@ def _estimate_prompt_chars(
     prompt_bundle: AgentPromptBundle,
     runtime_config: dict[str, Any],
 ) -> int:
-    system_prompt = runtime_config["system_prompt"]
-    user_prompt = _build_user_prompt(question, normalized_query, question_type, prompt_bundle)
-    profile_summary = json.dumps(_json_safe(prompt_bundle.profile_summary or {}), ensure_ascii=False) if prompt_bundle.profile_summary else ""
-    session_summary = json.dumps(_json_safe(prompt_bundle.session_summary or {}), ensure_ascii=False) if prompt_bundle.session_summary else ""
-    return len(system_prompt) + len(profile_summary) + len(session_summary) + len(user_prompt) + sum(len(str(item.get("content") or "")) for item in prompt_bundle.prior_context)
+    return _prompt_builder().estimate_prompt_chars(
+        question=question,
+        normalized_query=normalized_query,
+        question_type=question_type,
+        prompt_bundle=prompt_bundle,
+        runtime_config=runtime_config,
+    )
 
 
 def _estimate_request_chars(payload: dict[str, Any]) -> int:
     return len(json.dumps(_json_safe(payload), ensure_ascii=False))
-
-
-def _supports_temperature(model: str, reasoning_effort: str) -> bool:
-    lowered = model.lower().strip()
-    if lowered.startswith("gpt-5.4") or lowered.startswith("gpt-5.2"):
-        return reasoning_effort == "none"
-    if lowered.startswith("gpt-5"):
-        return False
-    return True
 
 
 def _estimate_json_chars(payload: Any) -> int:
@@ -4431,17 +3568,17 @@ def _summarize_session_memory(
     model = str(runtime_config.get("memory_model") or "").strip()
     if provider not in {"", "auto", "openai"} or not api_key or not model:
         return fallback_summary, _memory_summary_text(fallback_summary), provider or "fallback", model or "fallback", str(runtime_config.get("memory_prompt_version") or "v1")
-    evidence_rows = _grounding_evidence_rows(
-        {row["chunk_id"]: row for row in bundle.chunks},
-        list(response.get("used_chunk_ids") or []),
-        {row["asset_id"]: row for row in bundle.assets},
-        list(response.get("used_asset_ids") or []),
-        {},
-        [],
-        {row["assertion_id"]: row for row in bundle.assertions},
-        {row["evidence_id"]: row for row in bundle.evidence},
-        list(response.get("used_evidence_ids") or []),
-    )[:8]
+        evidence_rows = _answer_verifier().grounding_evidence_rows(
+            chunk_map={row["chunk_id"]: row for row in bundle.chunks},
+            used_chunk_ids=list(response.get("used_chunk_ids") or []),
+            asset_map={row["asset_id"]: row for row in bundle.assets},
+            used_asset_ids=list(response.get("used_asset_ids") or []),
+            sensor_row_map={},
+            used_sensor_row_ids=[],
+            assertion_map={row["assertion_id"]: row for row in bundle.assertions},
+            evidence_map={row["evidence_id"]: row for row in bundle.evidence},
+            used_evidence_ids=list(response.get("used_evidence_ids") or []),
+        )[:8]
     payload = _build_model_json_payload(
         model=model,
         reasoning_effort=str(runtime_config.get("memory_reasoning_effort") or "none"),
@@ -5684,67 +4821,16 @@ def _derive_communication_style(messages: list[dict[str, Any]], preferences: lis
     return ""
 
 
-def _build_model_json_payload(
-    *,
-    model: str,
-    reasoning_effort: str,
-    system_prompt: str,
-    user_payload: dict[str, Any],
-    schema_name: str,
-    schema: dict[str, Any],
-    temperature: float,
-    max_completion_tokens: int,
-) -> dict[str, Any]:
-    payload = {
-        "model": model,
-        "reasoning_effort": reasoning_effort,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": json.dumps(_json_safe(user_payload), ensure_ascii=False)},
-        ],
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {
-                "name": schema_name,
-                "strict": True,
-                "schema": schema,
-            },
-        },
-    }
-    if temperature > 0 and _supports_temperature(model, reasoning_effort):
-        payload["temperature"] = temperature
-    if max_completion_tokens > 0:
-        payload["max_completion_tokens"] = max_completion_tokens
-    return payload
-
-
-def _call_openai_json_payload(
-    *,
-    base_url: str,
-    api_key: str,
-    payload: dict[str, Any],
-    timeout_seconds: float,
-) -> dict[str, Any]:
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    with httpx.Client(timeout=timeout_seconds) as client:
-        response = client.post(f"{base_url}/chat/completions", headers=headers, json=payload)
-        response.raise_for_status()
-        return response.json()
-
-
 def _normalize_query(question: str) -> str:
-    return re.sub(r"\s+", " ", question.replace("\x00", " ").strip())
+    return planner_normalize_query(question)
 
 
 def _build_session_title(question: str) -> str:
-    return question[:80]
+    return planner_build_session_title(question)
 
 
 def _classify_question(question: str) -> str:
-    return classify_question_fallback(question)
+    return planner_classify_question(question)
 
 
 def _resolve_query_top_k(
@@ -5754,15 +4840,13 @@ def _resolve_query_top_k(
     router_top_k: int | None = None,
     router_source: str | None = None,
 ) -> tuple[int, str]:
-    if requested_top_k is not None:
-        return max(1, min(int(requested_top_k), runtime_config["max_top_k"])), "manual"
-    if router_top_k is not None and router_source and router_source.startswith("router"):
-        return max(1, min(int(router_top_k), runtime_config["max_top_k"])), router_source
-    if runtime_config.get("dynamic_top_k_enabled", True):
-        policy_key = f"{question_type}_top_k"
-        policy_value = runtime_config.get(policy_key, runtime_config["default_top_k"])
-        return max(1, min(int(policy_value), runtime_config["max_top_k"])), f"dynamic:{question_type}"
-    return max(1, min(int(runtime_config["default_top_k"]), runtime_config["max_top_k"])), "default"
+    return planner_resolve_query_top_k(
+        question_type,
+        requested_top_k,
+        runtime_config,
+        router_top_k=router_top_k,
+        router_source=router_source,
+    )
 
 
 def _select_retrieval_plan(
@@ -5771,64 +4855,7 @@ def _select_retrieval_plan(
     runtime_config: dict[str, Any],
     routing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    routing = routing or {}
-    max_search_k = runtime_config["max_search_k"]
-    prefer_assets = bool(routing.get("requires_visual")) or question_type == "visual_lookup"
-    document_spread = str(routing.get("document_spread") or "").strip().lower()
-    if document_spread not in {"single", "few", "broad"}:
-        if question_type == "comparison":
-            document_spread = "few"
-        elif question_type in {"fact", "explanation", "procedure"}:
-            document_spread = "few"
-        else:
-            document_spread = "single"
-    if question_type == "visual_lookup":
-        return {
-            "mode": "multimodal_focus",
-            "search_k": min(max(top_k * 2, top_k + 4), max_search_k),
-            "select_k": min(max(3, top_k), runtime_config["max_context_chunks"]),
-            "expand_neighbors": False,
-            "kg_search": False,
-            "graph_expand": False,
-            "prefer_assets": True,
-            "asset_vector_search": True,
-            "document_spread": "few" if document_spread == "single" else document_spread,
-        }
-    if question_type in {"definition", "fact", "source_lookup"}:
-        return {
-            "mode": "hybrid_visual_support" if prefer_assets else "hybrid_kg_support",
-            "search_k": min(max(top_k * (3 if prefer_assets else 2), top_k + (6 if prefer_assets else 4)), max_search_k),
-            "select_k": min(max(4, top_k), runtime_config["max_context_chunks"]),
-            "expand_neighbors": False,
-            "kg_search": runtime_config["kg_search_limit"] > 0,
-            "graph_expand": False,
-            "prefer_assets": prefer_assets,
-            "asset_vector_search": prefer_assets,
-            "document_spread": document_spread,
-        }
-    if question_type == "comparison":
-        return {
-            "mode": "hybrid_compare",
-            "search_k": min(max(top_k * 2, top_k + 4), max_search_k),
-            "select_k": min(max(5, top_k), runtime_config["max_context_chunks"]),
-            "expand_neighbors": True,
-            "kg_search": runtime_config["kg_search_limit"] > 0,
-            "graph_expand": runtime_config["graph_expansion_limit"] > 0,
-            "prefer_assets": prefer_assets,
-            "asset_vector_search": prefer_assets,
-            "document_spread": "few" if document_spread == "single" else document_spread,
-        }
-    return {
-        "mode": "neighbor_visual_expansion" if prefer_assets else "neighbor_expansion",
-        "search_k": min(max(top_k * (3 if prefer_assets else 2), top_k + (6 if prefer_assets else 3)), max_search_k),
-        "select_k": min(max(4, top_k), runtime_config["max_context_chunks"]),
-        "expand_neighbors": True,
-        "kg_search": runtime_config["kg_search_limit"] > 0,
-        "graph_expand": question_type in {"explanation", "procedure"} and runtime_config["graph_expansion_limit"] > 0,
-        "prefer_assets": prefer_assets,
-        "asset_vector_search": prefer_assets,
-        "document_spread": document_spread,
-    }
+    return planner_select_retrieval_plan(question_type, top_k, runtime_config, routing=routing)
 
 
 def _merge_hybrid_matches(
@@ -6463,39 +5490,6 @@ def _resolve_provider(runtime_config: dict[str, Any] | None = None) -> str:
     return "openai" if settings.agent_api_key else "disabled"
 
 
-def _extract_message_content(body: dict[str, Any]) -> str:
-    choices = body.get("choices") or []
-    if not choices:
-        raise AgentQueryError("Agent answer returned no choices")
-    message = choices[0].get("message") or {}
-    refusal = message.get("refusal")
-    if refusal:
-        raise AgentQueryError(f"Agent answer refused: {refusal}")
-
-    content = message.get("content")
-    if isinstance(content, str) and content.strip():
-        return content
-    if isinstance(content, list):
-        parts: list[str] = []
-        for item in content:
-            if isinstance(item, dict):
-                text = item.get("text")
-                if isinstance(text, dict):
-                    value = text.get("value")
-                    if value:
-                        parts.append(str(value))
-                elif text:
-                    parts.append(str(text))
-        if parts:
-            return "".join(parts)
-    parsed = message.get("parsed")
-    if isinstance(parsed, (dict, list)):
-        return json.dumps(_json_safe(parsed), ensure_ascii=False)
-    if isinstance(content, str):
-        return content
-    raise AgentQueryError("Agent answer returned no textual content")
-
-
 def _extract_json_candidate(content: str) -> str | None:
     text = str(content or "").strip()
     if not text:
@@ -6591,55 +5585,6 @@ def _coerce_agent_response(content: str, bundle: AgentContextBundle | None = Non
     }
 
 
-def _agent_response_schema() -> dict[str, Any]:
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "answer": {"type": "string"},
-            "confidence": {"type": "number"},
-            "abstained": {"type": "boolean"},
-            "abstain_reason": {"type": ["string", "null"]},
-            "used_chunk_ids": {
-                "type": "array",
-                "items": {"type": "string"},
-            },
-            "used_asset_ids": {
-                "type": "array",
-                "items": {"type": "string"},
-            },
-            "used_sensor_row_ids": {
-                "type": "array",
-                "items": {"type": "string"},
-            },
-            "used_evidence_ids": {
-                "type": "array",
-                "items": {"type": "string"},
-            },
-            "supporting_assertions": {
-                "type": "array",
-                "items": {"type": "string"},
-            },
-            "supporting_entities": {
-                "type": "array",
-                "items": {"type": "string"},
-            },
-        },
-        "required": [
-            "answer",
-            "confidence",
-            "abstained",
-            "abstain_reason",
-            "used_chunk_ids",
-            "used_asset_ids",
-            "used_sensor_row_ids",
-            "used_evidence_ids",
-            "supporting_assertions",
-            "supporting_entities",
-        ],
-    }
-
-
 def _json_safe(value: Any) -> Any:
     if isinstance(value, dict):
         return {str(key): _json_safe(item) for key, item in value.items()}
@@ -6653,38 +5598,7 @@ def _json_safe(value: Any) -> Any:
 
 
 def _derive_agent_review_state(response: dict[str, Any], runtime_config: dict[str, Any]) -> tuple[str, str]:
-    if response.get("abstained"):
-        return "needs_review", _normalize_reason_code(response.get("abstain_reason"), fallback="abstained")
-    grounding_check = response.get("grounding_check") or {}
-    if bool(grounding_check.get("open_world_answer_used")):
-        return "needs_review", "open_world_answer"
-    if bool(grounding_check.get("open_world_fallback_used")):
-        return "needs_review", "open_world_fallback"
-    if bool(grounding_check.get("last_resort_fallback_used")):
-        return "needs_review", "last_resort_fallback"
-    grounding_method = str(grounding_check.get("method") or "").strip()
-    if grounding_method in {"claim_verifier_error", "lexical_fallback", "supported_subset"}:
-        return "needs_review", grounding_method or "grounding_fallback"
-    if list(grounding_check.get("world_knowledge_claims") or []):
-        return "needs_review", "world_knowledge_support"
-    if list(grounding_check.get("unsupported_claims") or []):
-        return "needs_review", "unsupported_claims"
-    if float(grounding_check.get("supported_ratio") or 0.0) < max(
-        0.75,
-        float(runtime_config.get("claim_verifier_min_supported_ratio") or 0.66),
-    ):
-        return "needs_review", "weak_grounding_support"
-    confidence = float(response.get("confidence") or 0.0)
-    if confidence < runtime_config["review_confidence_threshold"]:
-        return "needs_review", "low_answer_confidence"
-    if (
-        not response.get("supporting_assertions")
-        and not response.get("used_asset_ids")
-        and not response.get("used_sensor_row_ids")
-        and not response.get("used_evidence_ids")
-    ):
-        return "unreviewed", "chunk_only_answer"
-    return "unreviewed", ""
+    return _answer_verifier().derive_agent_review_state(response, runtime_config)
 
 
 def _normalize_reason_code(value: Any, fallback: str) -> str:
