@@ -56,16 +56,34 @@ class FakeRepository:
         return "job-1"
 
     def create_corpus_snapshot(self, tenant_id, snapshot_kind, **kwargs):
+        snapshot_id = self.create_pending_corpus_snapshot(tenant_id, snapshot_kind, **kwargs)
+        self.activate_corpus_snapshot(
+            snapshot_id,
+            document_id=kwargs.get("document_id"),
+            job_id=kwargs.get("job_id"),
+        )
+        return snapshot_id
+
+    def create_pending_corpus_snapshot(self, tenant_id, snapshot_kind, **kwargs):
         snapshot_id = f"snapshot-{len(self.corpus_snapshots) + 1}"
         self.corpus_snapshots.append(
             {
                 "snapshot_id": snapshot_id,
                 "tenant_id": tenant_id,
                 "snapshot_kind": snapshot_kind,
+                "status": "pending",
                 **kwargs,
             }
         )
         return snapshot_id
+
+    def activate_corpus_snapshot(self, snapshot_id, **kwargs):
+        for snapshot in self.corpus_snapshots:
+            if snapshot["snapshot_id"] == snapshot_id:
+                snapshot["status"] = "active"
+                snapshot["activation"] = kwargs
+                return None
+        raise ValueError("Corpus snapshot not found")
 
     def claim_job(self, job_id, worker_id, lease_seconds, preserve_status=False):
         self.claimed.append((job_id, worker_id, lease_seconds, preserve_status))
@@ -679,7 +697,7 @@ def test_review_chunk_accept_quarantines_when_extractor_errors(monkeypatch) -> N
     from src.bee_ingestion.kg import KGExtractionError
 
     monkeypatch.setattr(
-        "src.bee_ingestion.service.extract_candidates_with_meta",
+        "src.bee_ingestion.offline_pipeline.stages.build_kg.extract_candidates_with_meta",
         lambda *args, **kwargs: (_ for _ in ()).throw(KGExtractionError("bad schema")),
     )
 
@@ -916,7 +934,7 @@ def test_run_kg_pipeline_marks_empty_relation_set_as_skipped(monkeypatch) -> Non
     from types import SimpleNamespace
 
     monkeypatch.setattr(
-        "src.bee_ingestion.service.extract_candidates_with_meta",
+        "src.bee_ingestion.offline_pipeline.stages.build_kg.extract_candidates_with_meta",
         lambda *args, **kwargs: SimpleNamespace(
             result=empty_result,
             raw_payload={"ok": True},
@@ -925,9 +943,9 @@ def test_run_kg_pipeline_marks_empty_relation_set_as_skipped(monkeypatch) -> Non
             prompt_version="v1",
         ),
     )
-    monkeypatch.setattr("src.bee_ingestion.service.prune_extraction", lambda result, ontology, min_conf: (result, []))
-    monkeypatch.setattr("src.bee_ingestion.service.canonicalize_extraction", lambda result, ontology: result)
-    monkeypatch.setattr("src.bee_ingestion.service.validate_extraction", lambda result, ontology, min_conf: (True, []))
+    monkeypatch.setattr("src.bee_ingestion.offline_pipeline.stages.build_kg.prune_extraction", lambda result, ontology, min_conf: (result, []))
+    monkeypatch.setattr("src.bee_ingestion.offline_pipeline.stages.build_kg.canonicalize_extraction", lambda result, ontology: result)
+    monkeypatch.setattr("src.bee_ingestion.offline_pipeline.stages.build_kg.validate_extraction", lambda result, ontology, min_conf: (True, []))
 
     result = service._run_kg_pipeline("doc-1", chunk)
 
@@ -969,7 +987,7 @@ def test_run_kg_pipeline_skips_invalid_relation_attempts_when_nothing_survives(m
     from types import SimpleNamespace
 
     monkeypatch.setattr(
-        "src.bee_ingestion.service.extract_candidates_with_meta",
+        "src.bee_ingestion.offline_pipeline.stages.build_kg.extract_candidates_with_meta",
         lambda *args, **kwargs: SimpleNamespace(
             result=empty_result,
             raw_payload={"ok": True},
@@ -979,11 +997,11 @@ def test_run_kg_pipeline_skips_invalid_relation_attempts_when_nothing_survives(m
         ),
     )
     monkeypatch.setattr(
-        "src.bee_ingestion.service.prune_extraction",
+        "src.bee_ingestion.offline_pipeline.stages.build_kg.prune_extraction",
         lambda result, ontology, min_conf: (result, ["invalid_subject_type:r1:Queen->Colony"]),
     )
-    monkeypatch.setattr("src.bee_ingestion.service.canonicalize_extraction", lambda result, ontology: result)
-    monkeypatch.setattr("src.bee_ingestion.service.validate_extraction", lambda result, ontology, min_conf: (False, []))
+    monkeypatch.setattr("src.bee_ingestion.offline_pipeline.stages.build_kg.canonicalize_extraction", lambda result, ontology: result)
+    monkeypatch.setattr("src.bee_ingestion.offline_pipeline.stages.build_kg.validate_extraction", lambda result, ontology, min_conf: (False, []))
 
     result = service._run_kg_pipeline("doc-1", chunk)
 

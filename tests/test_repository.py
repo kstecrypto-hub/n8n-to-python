@@ -6,6 +6,7 @@ import pytest
 from src.bee_ingestion.models import KGExtractionResult, SourceDocument
 from src.bee_ingestion.repository import Repository
 from src.bee_ingestion.settings import settings
+from src.bee_ingestion.storage.bootstrap import ensure_app_storage_compatibility
 
 
 def _source() -> SourceDocument:
@@ -17,6 +18,11 @@ def _source() -> SourceDocument:
         raw_text=f"Repository test text {nonce}",
         document_class="note",
     )
+
+
+def _repository() -> Repository:
+    ensure_app_storage_compatibility()
+    return Repository()
 
 
 def _create_job(repository: Repository, document_id: str) -> str:
@@ -33,7 +39,7 @@ def _create_job(repository: Repository, document_id: str) -> str:
 
 
 def test_create_job_persists_versions_and_registered_status() -> None:
-    repository = Repository()
+    repository = _repository()
     document_id, _ = repository.register_document(_source())
 
     job_id = _create_job(repository, document_id)
@@ -47,7 +53,7 @@ def test_create_job_persists_versions_and_registered_status() -> None:
 
 
 def test_claim_job_prevents_second_active_worker() -> None:
-    repository = Repository()
+    repository = _repository()
     document_id, _ = repository.register_document(_source())
     job_id = _create_job(repository, document_id)
 
@@ -56,7 +62,7 @@ def test_claim_job_prevents_second_active_worker() -> None:
 
 
 def test_record_stage_rejects_invalid_transition() -> None:
-    repository = Repository()
+    repository = _repository()
     document_id, _ = repository.register_document(_source())
     job_id = _create_job(repository, document_id)
 
@@ -73,7 +79,7 @@ def test_record_stage_rejects_invalid_transition() -> None:
 
 
 def test_record_stage_updates_job_status_for_valid_transition() -> None:
-    repository = Repository()
+    repository = _repository()
     document_id, _ = repository.register_document(_source())
     job_id = _create_job(repository, document_id)
 
@@ -93,7 +99,7 @@ def test_record_stage_updates_job_status_for_valid_transition() -> None:
 
 
 def test_save_kg_result_replaces_prior_chunk_assertions() -> None:
-    repository = Repository()
+    repository = _repository()
     document_id, _ = repository.register_document(_source())
     chunk_id = f"chunk-{uuid4()}"
 
@@ -188,7 +194,7 @@ def test_save_kg_result_replaces_prior_chunk_assertions() -> None:
 
 
 def test_list_kg_raw_extractions_filters_by_status() -> None:
-    repository = Repository()
+    repository = _repository()
     document_id, _ = repository.register_document(_source())
     chunk_id = f"chunk-{uuid4()}"
 
@@ -252,7 +258,7 @@ def test_list_kg_raw_extractions_filters_by_status() -> None:
 
 
 def test_save_kg_result_sanitizes_nul_characters_in_payload_and_columns() -> None:
-    repository = Repository()
+    repository = _repository()
     document_id, _ = repository.register_document(_source())
     chunk_id = f"chunk-{uuid4()}"
 

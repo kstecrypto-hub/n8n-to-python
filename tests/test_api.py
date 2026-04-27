@@ -6,7 +6,18 @@ from uuid import uuid4
 
 from src.bee_ingestion.api import app
 from src.bee_ingestion import api as api_module
+from src.bee_ingestion.admin import corpus_inspection_service
 from src.bee_ingestion.auth_store import AuthStore
+from src.bee_ingestion.http_api.routes import agent_routes as agent_routes_module
+from src.bee_ingestion.http_api.routes import frontend_routes as frontend_routes_module
+from src.bee_ingestion.http_api.routes import ingest_routes as ingest_routes_module
+from src.bee_ingestion.storage import (
+    admin_inspection_store,
+    agent_feedback_store,
+    agent_profile_store,
+    agent_trace_store,
+    memory_store,
+)
 
 
 def _test_auth_dsn() -> str:
@@ -49,7 +60,7 @@ def test_agent_home_uses_frontend_redirect(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(
-        api_module,
+        frontend_routes_module,
         "frontend_redirect",
         lambda path, fallback_html=None: JSONResponse({"path": path, "fallback": bool(fallback_html)}),
     )
@@ -64,7 +75,7 @@ def test_agent_app_uses_frontend_index_response(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(
-        api_module,
+        frontend_routes_module,
         "frontend_index_response",
         lambda fallback_html=None: HTMLResponse("frontend-index"),
     )
@@ -79,7 +90,7 @@ def test_agent_app_path_uses_frontend_path_response(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(
-        api_module,
+        frontend_routes_module,
         "frontend_path_response",
         lambda frontend_path, fallback_html=None: HTMLResponse(f"frontend-path:{frontend_path}"),
     )
@@ -94,7 +105,7 @@ def test_admin_app_redirect_uses_frontend_redirect(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(
-        api_module,
+        frontend_routes_module,
         "frontend_redirect",
         lambda path, fallback_html=None: JSONResponse({"path": path, "fallback": bool(fallback_html)}),
     )
@@ -107,12 +118,12 @@ def test_admin_app_redirect_uses_frontend_redirect(monkeypatch) -> None:
 
 def test_admin_page_renders() -> None:
     client = TestClient(app)
-    original_frontend_redirect = api_module.frontend_redirect
-    api_module.frontend_redirect = lambda path, fallback_html=None: JSONResponse({"path": path, "fallback": bool(fallback_html)})
+    original_frontend_redirect = frontend_routes_module.frontend_redirect
+    frontend_routes_module.frontend_redirect = lambda path, fallback_html=None: JSONResponse({"path": path, "fallback": bool(fallback_html)})
     try:
         response = client.get("/admin")
     finally:
-        api_module.frontend_redirect = original_frontend_redirect
+        frontend_routes_module.frontend_redirect = original_frontend_redirect
 
     assert response.status_code == 200
     assert response.json() == {"path": "/app/control", "fallback": True}
@@ -122,19 +133,19 @@ def test_admin_db_row_crud_endpoints(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(
-        api_module.repository,
+        admin_inspection_store,
         "insert_admin_relation_row",
-        lambda relation_name, values, schema_name="public": {"document_id": "doc-1", **values},
+        lambda repository, relation_name, values, schema_name="public": {"document_id": "doc-1", **values},
     )
     monkeypatch.setattr(
-        api_module.repository,
+        admin_inspection_store,
         "update_admin_relation_row",
-        lambda relation_name, key, values, schema_name="public": {**key, **values},
+        lambda repository, relation_name, key, values, schema_name="public": {**key, **values},
     )
     monkeypatch.setattr(
-        api_module.repository,
+        admin_inspection_store,
         "delete_admin_relation_row",
-        lambda relation_name, key, schema_name="public": 1,
+        lambda repository, relation_name, key, schema_name="public": 1,
     )
 
     create_response = client.post(
@@ -167,9 +178,9 @@ def test_admin_db_sql_endpoint(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(
-        api_module.repository,
+        admin_inspection_store,
         "execute_admin_sql",
-        lambda statement: {
+        lambda repository, statement: {
             "statement_type": "select",
             "columns": ["table_name"],
             "rows": [{"table_name": "documents"}],
@@ -256,14 +267,14 @@ def test_admin_clear_session_memory_sections(monkeypatch) -> None:
     }
     captured: dict[str, object] = {}
 
-    monkeypatch.setattr(api_module.repository, "get_agent_session_memory", lambda session_id: session_row if session_id == "session-1" else None)
+    monkeypatch.setattr(memory_store, "get_agent_session_memory", lambda repository, session_id: session_row if session_id == "session-1" else None)
 
     def _update(session_id: str, patch: dict):
         captured["session_id"] = session_id
         captured["patch"] = patch
         return {**session_row, **patch}
 
-    monkeypatch.setattr(api_module.repository, "update_agent_session_memory_record", _update)
+    monkeypatch.setattr(memory_store, "update_agent_session_memory_record", lambda repository, session_id, patch: _update(session_id, patch))
 
     response = client.post(
         "/admin/api/agent/sessions/session-1/memory/clear",
@@ -306,14 +317,14 @@ def test_admin_clear_profile_memory_sections(monkeypatch) -> None:
     }
     captured: dict[str, object] = {}
 
-    monkeypatch.setattr(api_module.repository, "get_agent_profile", lambda profile_id: profile_row if profile_id == "profile-1" else None)
+    monkeypatch.setattr(agent_profile_store, "get_agent_profile", lambda repository, profile_id: profile_row if profile_id == "profile-1" else None)
 
     def _update(profile_id: str, patch: dict):
         captured["profile_id"] = profile_id
         captured["patch"] = patch
         return {**profile_row, **patch}
 
-    monkeypatch.setattr(api_module.repository, "update_agent_profile_record", _update)
+    monkeypatch.setattr(agent_profile_store, "update_agent_profile_record", lambda repository, profile_id, patch: _update(profile_id, patch))
 
     response = client.post(
         "/admin/api/agent/profiles/profile-1/memory/clear",
@@ -352,6 +363,7 @@ def test_login_rate_limit_enforced(monkeypatch) -> None:
 def test_platform_owner_can_access_admin_sql_without_token(monkeypatch) -> None:
     client = TestClient(app)
     api_module.auth_store._instance = AuthStore(_workspace_auth_db("platform-owner-sql"), dsn=_test_auth_dsn())
+    api_module.rate_limiter.clear()
     api_module.auth_store.create_user(
         "owner@example.com",
         "very-secure-hive-password",
@@ -363,9 +375,9 @@ def test_platform_owner_can_access_admin_sql_without_token(monkeypatch) -> None:
     assert login.status_code == 200
 
     monkeypatch.setattr(
-        api_module.repository,
+        admin_inspection_store,
         "execute_admin_sql",
-        lambda statement: {
+        lambda repository, statement: {
             "statement_type": "select",
             "columns": ["value"],
             "rows": [{"value": 1}],
@@ -401,6 +413,7 @@ def test_tenant_admin_cannot_run_admin_sql_without_permission() -> None:
 def test_accounts_reader_can_browse_identity_db_but_not_app_db(monkeypatch) -> None:
     client = TestClient(app)
     api_module.auth_store._instance = AuthStore(_workspace_auth_db("accounts-reader"), dsn=_test_auth_dsn())
+    api_module.rate_limiter.clear()
     api_module.auth_store.create_user(
         "auditor@example.com",
         "very-secure-hive-password",
@@ -413,20 +426,17 @@ def test_accounts_reader_can_browse_identity_db_but_not_app_db(monkeypatch) -> N
     assert login.status_code == 200
 
     monkeypatch.setattr(
-        api_module.identity_repository,
-        "_instance",
-        SimpleNamespace(
-            list_admin_relations=lambda search=None, schema_name=None: [
-                {
-                    "schema_name": "auth",
-                    "relation_name": "auth_users",
-                    "relation_type": "table",
-                    "estimated_rows": 1,
-                    "has_primary_key": True,
-                }
-            ]
-        ),
-        raising=False,
+        admin_inspection_store,
+        "list_admin_relations",
+        lambda repository, search=None, schema_name=None: [
+            {
+                "schema_name": "auth",
+                "relation_name": "auth_users",
+                "relation_type": "table",
+                "estimated_rows": 1,
+                "has_primary_key": True,
+            }
+        ],
     )
 
     identity_response = client.get("/admin/api/db/relations?database=identity")
@@ -535,16 +545,29 @@ def test_admin_document_bundle_endpoint(monkeypatch) -> None:
     monkeypatch.setattr(api_module.repository, "list_kg_evidence", lambda document_id=None, limit=100: [{"evidence_id": "ev-1"}] if document_id else [])
     monkeypatch.setattr(api_module.repository, "list_kg_raw_extractions", lambda document_id=None, chunk_id=None, status=None, limit=100, offset=0: [{"extraction_id": "x-1"}] if document_id else [])
     monkeypatch.setattr(api_module.repository, "get_document_related_counts", lambda document_id: {"sources": 1, "chunks": 1, "metadata": 1, "kg_entities": 1, "kg_assertions": 1, "kg_evidence": 1, "kg_raw": 1})
+    monkeypatch.setattr(api_module.chroma_store, "_instance", SimpleNamespace(asset_collection=SimpleNamespace(name="page_assets")), raising=False)
     monkeypatch.setattr(
-        api_module,
-        "_get_chroma_payload",
-        lambda document_id=None, limit=50, offset=0, collection_name=None: {
+        corpus_inspection_service,
+        "get_chroma_payload",
+        lambda chroma_store=None, document_id=None, limit=50, offset=0, collection_name=None: {
             "records": [{"id": "vec-1"}] if document_id else [],
             "total": 1 if document_id else 0,
             "error": None,
         },
     )
-    monkeypatch.setattr(api_module, "_get_chroma_parity", lambda document_id=None: {"accepted_chunks": 1, "vectors": 1, "missing_vectors": [], "extra_vectors": [], "missing_vectors_total": 0, "extra_vectors_total": 0, "error": None})
+    monkeypatch.setattr(
+        corpus_inspection_service,
+        "get_chroma_parity",
+        lambda repository=None, chroma_store=None, document_id=None: {
+            "accepted_chunks": 1,
+            "vectors": 1,
+            "missing_vectors": [],
+            "extra_vectors": [],
+            "missing_vectors_total": 0,
+            "extra_vectors_total": 0,
+            "error": None,
+        },
+    )
 
     response = client.get("/admin/api/documents/doc-1/bundle", headers=_admin_headers())
 
@@ -564,23 +587,26 @@ def test_admin_auto_review_chunks_endpoint(monkeypatch) -> None:
 
     monkeypatch.setattr(
         api_module.service,
-        "auto_review_chunks",
-        lambda document_id=None, batch_size=100: {
+        "_instance",
+        SimpleNamespace(enqueue_maintenance_job=lambda operation, document_id=None, parameters=None: {
+            "status": "registered",
+            "operation": operation,
+            "job_id": "job-review",
             "document_id": document_id,
-            "processed_chunks": 2,
-            "accepted": 1,
-            "rejected": 1,
-            "review": 0,
-            "errors": [],
-        },
+            "parameters": parameters or {},
+            "execution": "offline_worker",
+        }),
+        raising=False,
     )
 
     response = client.post("/admin/api/chunks/review/auto", json={"document_id": "doc-1", "batch_size": 25}, headers=_admin_headers())
 
     assert response.status_code == 200
     payload = response.json()
+    assert payload["status"] == "registered"
+    assert payload["operation"] == "auto_review_chunks"
     assert payload["document_id"] == "doc-1"
-    assert payload["processed_chunks"] == 2
+    assert payload["parameters"]["batch_size"] == 25
 
 
 def test_admin_revalidate_document_endpoint(monkeypatch) -> None:
@@ -588,23 +614,26 @@ def test_admin_revalidate_document_endpoint(monkeypatch) -> None:
 
     monkeypatch.setattr(
         api_module.service,
-        "revalidate_document",
-        lambda document_id, rerun_kg=True: {
+        "_instance",
+        SimpleNamespace(enqueue_maintenance_job=lambda operation, document_id=None, parameters=None: {
+            "status": "registered",
+            "operation": operation,
+            "job_id": "job-revalidate",
             "document_id": document_id,
-            "chunks": 3,
-            "accepted": 2,
-            "review": 1,
-            "rejected": 0,
-            "kg": {"validated": 2, "review": 0, "quarantined": 0},
-        },
+            "parameters": parameters or {},
+            "execution": "offline_worker",
+        }),
+        raising=False,
     )
 
     response = client.post("/admin/api/documents/doc-1/revalidate", json={"rerun_kg": True}, headers=_admin_headers())
 
     assert response.status_code == 200
     payload = response.json()
+    assert payload["status"] == "registered"
+    assert payload["operation"] == "revalidate_document"
     assert payload["document_id"] == "doc-1"
-    assert payload["chunks"] == 3
+    assert payload["parameters"]["rerun_kg"] is True
 
 
 def test_admin_chunk_detail_endpoint(monkeypatch) -> None:
@@ -636,19 +665,21 @@ def test_admin_chunk_detail_endpoint(monkeypatch) -> None:
 def test_ingest_pdf_endpoint(monkeypatch) -> None:
     client = TestClient(app)
     pdf_path = "E:\\n8n to python\\sample.pdf"
-
-    monkeypatch.setattr(api_module.Path, "exists", lambda self: True)
-    monkeypatch.setattr(api_module, "_build_pdf_content_hash", lambda path, page_start=None, page_end=None: "sha256:test-pdf")
-    monkeypatch.setattr(
-        api_module.service,
-        "ingest_text",
-        lambda source: {
+    fake_service = SimpleNamespace(
+        ingest_text=lambda source: (_ for _ in ()).throw(AssertionError("inline ingest should not be called")),
+        enqueue_text=lambda source: {
+            "job_id": "job-1",
+            "status": "registered",
             "filename": source.filename,
             "source_type": source.source_type,
             "raw_text": source.raw_text,
             "metadata": source.metadata,
         },
     )
+
+    monkeypatch.setattr(ingest_routes_module.Path, "exists", lambda self: True)
+    monkeypatch.setattr(ingest_routes_module, "build_pdf_content_hash", lambda path, page_start=None, page_end=None: "sha256:test-pdf")
+    monkeypatch.setattr(api_module.service, "_instance", fake_service, raising=False)
 
     response = client.post(
         "/ingest/pdf",
@@ -658,9 +689,60 @@ def test_ingest_pdf_endpoint(monkeypatch) -> None:
 
     assert response.status_code == 200
     payload = response.json()
+    assert payload["job_id"] == "job-1"
+    assert payload["status"] == "registered"
     assert payload["filename"] == "sample.pdf"
     assert payload["source_type"] == "pdf"
     assert payload["metadata"]["page_range"] == {"start": 17, "end": 21}
+
+
+def test_ingest_text_endpoint_enqueues_job_without_inline_execution(monkeypatch) -> None:
+    client = TestClient(app)
+    calls = {"enqueue": 0}
+    fake_service = SimpleNamespace(
+        ingest_text=lambda source: (_ for _ in ()).throw(AssertionError("inline ingest should not be called")),
+        enqueue_text=lambda source: calls.__setitem__("enqueue", calls["enqueue"] + 1) or {"job_id": "job-2", "status": "registered", "filename": source.filename},
+    )
+
+    monkeypatch.setattr(api_module.service, "_instance", fake_service, raising=False)
+
+    response = client.post(
+        "/ingest/text",
+        json={"tenant_id": "shared", "source_type": "text", "filename": "manual.txt", "raw_text": "hello"},
+        headers=_admin_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"job_id": "job-2", "status": "registered", "filename": "manual.txt"}
+    assert calls["enqueue"] == 1
+
+
+def test_agent_query_route_uses_agent_service(monkeypatch, tmp_path) -> None:
+    client = TestClient(app)
+    _login_public_user(client, tmp_path)
+    captured = {}
+
+    monkeypatch.setattr(
+        api_module.agent_service,
+        "query",
+        lambda **kwargs: captured.update(kwargs) or {
+            "answer": "ok",
+            "confidence": 0.9,
+            "abstained": False,
+            "abstain_reason": None,
+            "citations": [],
+            "query_run_id": "run-1",
+            "session_id": "session-1",
+            "session_token": "session-token",
+            "profile_id": "profile-1",
+            "profile_token": "profile-token",
+        },
+    )
+
+    response = client.post("/agent/query", json={"question": "How do bees make honey?"}, headers=_browser_headers())
+
+    assert response.status_code == 200
+    assert captured["question"] == "How do bees make honey?"
 
 
 def test_admin_kg_entity_detail_endpoint(monkeypatch) -> None:
@@ -704,7 +786,15 @@ def test_admin_chroma_parity_endpoint(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(api_module.repository, "list_chunk_records_for_kg", lambda document_id=None, limit=5000, offset=0: [{"chunk_id": "chunk-1"}, {"chunk_id": "chunk-2"}])
-    monkeypatch.setattr(api_module, "_get_chroma_payload", lambda document_id=None, limit=5000, offset=0: {"records": [{"id": "chunk-1"}, {"id": "chunk-extra"}], "total": 2, "error": None})
+    monkeypatch.setattr(
+        corpus_inspection_service,
+        "get_chroma_payload",
+        lambda chroma_store=None, document_id=None, limit=5000, offset=0, collection_name=None: {
+            "records": [{"id": "chunk-1"}, {"id": "chunk-extra"}],
+            "total": 2,
+            "error": None,
+        },
+    )
 
     response = client.get("/admin/api/chroma/parity", headers=_admin_headers())
 
@@ -749,14 +839,14 @@ def test_admin_agent_runs_endpoint(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(
-        api_module.repository,
+        agent_trace_store,
         "list_agent_query_runs",
-        lambda session_id=None, status=None, abstained=None, review_status=None, limit=100, offset=0: [{"query_run_id": "run-1", "question": "How do bees produce honey?"}],
+        lambda repository, session_id=None, status=None, abstained=None, review_status=None, limit=100, offset=0: [{"query_run_id": "run-1", "question": "How do bees produce honey?"}],
     )
     monkeypatch.setattr(
-        api_module.repository,
+        agent_trace_store,
         "count_agent_query_runs",
-        lambda session_id=None, status=None, abstained=None, review_status=None: 1,
+        lambda repository, session_id=None, status=None, abstained=None, review_status=None: 1,
     )
 
     response = client.get("/admin/api/agent/runs", headers=_admin_headers())
@@ -771,9 +861,9 @@ def test_admin_agent_run_detail_endpoint(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(
-        api_module.repository,
+        agent_trace_store,
         "get_agent_query_detail",
-        lambda query_run_id: {
+        lambda repository, query_run_id: {
             "query_run": {"query_run_id": query_run_id, "answer": "Honey bees produce honey."},
             "sources": [{"source_kind": "chunk", "source_id": "chunk-1"}],
             "reviews": [],
@@ -810,8 +900,8 @@ def test_agent_chat_endpoint(monkeypatch, tmp_path) -> None:
 
 def test_public_agent_sessions_endpoint(monkeypatch, tmp_path) -> None:
     client = TestClient(app)
-    monkeypatch.setattr(api_module, "_require_authenticated_public_user", lambda request: {"user": {"user_id": "user-1"}})
-    api_module.repository._instance = SimpleNamespace(
+    monkeypatch.setattr(agent_routes_module, "require_authenticated_public_user", lambda request: {"user": {"user_id": "user-1"}})
+    monkeypatch.setattr(api_module.repository, "_instance", SimpleNamespace(
         list_agent_sessions=lambda status=None, limit=100, offset=0, tenant_id=None, auth_user_id=None, workspace_kind=None: [
             {
                 "session_id": "session-1",
@@ -823,7 +913,7 @@ def test_public_agent_sessions_endpoint(monkeypatch, tmp_path) -> None:
             }
         ],
         count_agent_sessions=lambda status=None, tenant_id=None, auth_user_id=None, workspace_kind=None: 1,
-    )
+    ), raising=False)
 
     response = client.get("/agent/sessions?workspace_kind=general", headers=_browser_headers())
 
@@ -836,10 +926,10 @@ def test_public_agent_sessions_endpoint(monkeypatch, tmp_path) -> None:
 
 def test_public_agent_session_activate_endpoint(monkeypatch, tmp_path) -> None:
     client = TestClient(app)
-    monkeypatch.setattr(api_module, "_require_authenticated_public_user", lambda request: {"user": {"user_id": "user-1"}})
+    monkeypatch.setattr(agent_routes_module, "require_authenticated_public_user", lambda request: {"user": {"user_id": "user-1"}})
     saved = {}
     captured = {}
-    api_module.repository._instance = SimpleNamespace(
+    monkeypatch.setattr(api_module.repository, "_instance", SimpleNamespace(
         get_agent_session=lambda session_id, tenant_id=None: {
             "session_id": session_id,
             "auth_user_id": "user-1",
@@ -858,7 +948,7 @@ def test_public_agent_session_activate_endpoint(monkeypatch, tmp_path) -> None:
         ) or [
             {"message_id": "m1", "role": "user", "content": "How do bees produce honey?", "metadata_json": {}, "created_at": "2026-04-22T12:00:00Z"}
         ],
-    )
+    ), raising=False)
 
     response = client.post("/agent/sessions/session-1/activate", headers=_browser_headers())
 
@@ -877,14 +967,14 @@ def test_admin_agent_run_review_endpoint(monkeypatch) -> None:
     saved = {}
 
     monkeypatch.setattr(
-        api_module.repository,
+        agent_trace_store,
         "get_agent_query_detail",
-        lambda query_run_id: {"query_run": {"query_run_id": query_run_id}, "sources": [], "reviews": []},
+        lambda repository, query_run_id: {"query_run": {"query_run_id": query_run_id}, "sources": [], "reviews": []},
     )
     monkeypatch.setattr(
-        api_module.repository,
+        agent_feedback_store,
         "save_agent_answer_review",
-        lambda query_run_id, decision, reviewer="admin", notes=None, payload=None: saved.update(
+        lambda repository, query_run_id, decision, reviewer="admin", notes=None, payload=None: saved.update(
             {"query_run_id": query_run_id, "decision": decision, "reviewer": reviewer, "notes": notes}
         ),
     )
@@ -899,11 +989,11 @@ def test_admin_agent_reviews_endpoint(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(
-        api_module.repository,
+        agent_feedback_store,
         "list_agent_answer_reviews",
-        lambda decision=None, limit=100, offset=0: [{"query_run_id": "run-1", "decision": "approved"}],
+        lambda repository, decision=None, limit=100, offset=0: [{"query_run_id": "run-1", "decision": "approved"}],
     )
-    monkeypatch.setattr(api_module.repository, "count_agent_answer_reviews", lambda decision=None: 1)
+    monkeypatch.setattr(agent_feedback_store, "count_agent_answer_reviews", lambda repository, decision=None: 1)
 
     response = client.get("/admin/api/agent/reviews", headers=_admin_headers())
 
@@ -941,9 +1031,9 @@ def test_admin_agent_run_replay_endpoint(monkeypatch) -> None:
     client = TestClient(app)
 
     monkeypatch.setattr(
-        api_module.repository,
+        agent_trace_store,
         "get_agent_query_detail",
-        lambda query_run_id: {
+        lambda repository, query_run_id: {
             "query_run": {
                 "query_run_id": query_run_id,
                 "question": "How do bees produce honey?",
@@ -956,12 +1046,13 @@ def test_admin_agent_run_replay_endpoint(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         api_module.agent_service,
-        "chat",
-        lambda question, session_id=None, auth_user_id=None, tenant_id="shared", document_ids=None, top_k=None, query_mode=None, trusted_tenant=False, trusted_session_reuse=False: {
+        "_instance",
+        SimpleNamespace(chat=lambda question, session_id=None, auth_user_id=None, tenant_id="shared", document_ids=None, top_k=None, query_mode=None, trusted_tenant=False, trusted_session_reuse=False: {
             "session_id": session_id or "session-2",
             "query_run_id": "run-2",
             "answer": "Honey bees produce honey.",
-        },
+        }),
+        raising=False,
     )
 
     response = client.post("/admin/api/agent/runs/run-1/replay", json={"reuse_session": False}, headers=_admin_headers())

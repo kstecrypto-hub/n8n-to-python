@@ -39,6 +39,17 @@ from src.bee_ingestion.models import (
 )
 from src.bee_ingestion.pipeline import is_terminal_job_status, validate_job_transition, validate_stage_run
 from src.bee_ingestion.settings import settings
+from src.bee_ingestion.storage import (
+    admin_inspection_store,
+    agent_feedback_store,
+    agent_message_store,
+    agent_profile_store,
+    agent_session_store,
+    agent_trace_store,
+    memory_store,
+    runtime_config_store,
+    workspace_store,
+)
 
 ALLOWED_AGENT_REVIEW_DECISIONS = {"approved", "rejected", "needs_review"}
 _TRACE_MAX_STRING_CHARS = 4000
@@ -68,323 +79,6 @@ _METRIC_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._:-]{1,127}$")
 class Repository:
     def __init__(self, dsn: str | None = None) -> None:
         self.dsn = dsn or settings.postgres_dsn
-        self._ensure_agent_schema_compatibility()
-
-    def _ensure_agent_schema_compatibility(self) -> None:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute("ALTER TABLE IF EXISTS agent_profiles ADD COLUMN IF NOT EXISTS profile_token_issued_at timestamptz")
-                cur.execute("ALTER TABLE IF EXISTS agent_sessions ADD COLUMN IF NOT EXISTS auth_user_id text")
-                cur.execute("ALTER TABLE IF EXISTS agent_sessions ADD COLUMN IF NOT EXISTS workspace_kind text NOT NULL DEFAULT 'general'")
-                cur.execute("ALTER TABLE IF EXISTS agent_sessions ADD COLUMN IF NOT EXISTS session_token_issued_at timestamptz")
-                cur.execute("ALTER TABLE IF EXISTS sensor_readings ADD COLUMN IF NOT EXISTS reading_hash text NOT NULL DEFAULT ''")
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS corpus_snapshots (
-                      snapshot_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                      tenant_id text NOT NULL DEFAULT 'shared',
-                      snapshot_kind text NOT NULL,
-                      summary text NOT NULL DEFAULT '',
-                      document_id uuid,
-                      job_id uuid,
-                      metrics_json jsonb NOT NULL DEFAULT '{}'::jsonb,
-                      metadata_json jsonb NOT NULL DEFAULT '{}'::jsonb,
-                      created_at timestamptz NOT NULL DEFAULT now()
-                    )
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS document_synopses (
-                      document_id uuid PRIMARY KEY REFERENCES documents(document_id) ON DELETE CASCADE,
-                      tenant_id text NOT NULL,
-                      title text NOT NULL DEFAULT '',
-                      synopsis_text text NOT NULL DEFAULT '',
-                      accepted_chunk_count integer NOT NULL DEFAULT 0,
-                      section_count integer NOT NULL DEFAULT 0,
-                      source_stage text NOT NULL DEFAULT 'chunks_validated',
-                      synopsis_version text NOT NULL DEFAULT 'extractive-v1',
-                      metadata_json jsonb NOT NULL DEFAULT '{}'::jsonb,
-                      created_at timestamptz NOT NULL DEFAULT now(),
-                      updated_at timestamptz NOT NULL DEFAULT now()
-                    )
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS document_section_synopses (
-                      section_id text PRIMARY KEY,
-                      document_id uuid NOT NULL REFERENCES documents(document_id) ON DELETE CASCADE,
-                      tenant_id text NOT NULL,
-                      parent_section_id text REFERENCES document_section_synopses(section_id) ON DELETE CASCADE,
-                      section_path text[] NOT NULL DEFAULT '{}',
-                      section_level integer NOT NULL DEFAULT 0,
-                      section_title text NOT NULL DEFAULT '',
-                      page_start integer,
-                      page_end integer,
-                      char_start integer,
-                      char_end integer,
-                      first_chunk_id text REFERENCES document_chunks(chunk_id) ON DELETE SET NULL,
-                      last_chunk_id text REFERENCES document_chunks(chunk_id) ON DELETE SET NULL,
-                      accepted_chunk_count integer NOT NULL DEFAULT 0,
-                      total_chunk_count integer NOT NULL DEFAULT 0,
-                      synopsis_text text NOT NULL DEFAULT '',
-                      synopsis_version text NOT NULL DEFAULT 'extractive-v1',
-                      metadata_json jsonb NOT NULL DEFAULT '{}'::jsonb,
-                      created_at timestamptz NOT NULL DEFAULT now(),
-                      updated_at timestamptz NOT NULL DEFAULT now(),
-                      UNIQUE (document_id, section_path)
-                    )
-                    """
-                )
-                cur.execute("ALTER TABLE IF EXISTS documents ADD COLUMN IF NOT EXISTS latest_corpus_snapshot_id uuid")
-                cur.execute("ALTER TABLE IF EXISTS ingestion_jobs ADD COLUMN IF NOT EXISTS completed_corpus_snapshot_id uuid")
-                cur.execute("ALTER TABLE IF EXISTS agent_query_runs ADD COLUMN IF NOT EXISTS corpus_snapshot_id uuid")
-                cur.execute("ALTER TABLE IF EXISTS agent_query_sources ADD COLUMN IF NOT EXISTS corpus_snapshot_id uuid")
-                cur.execute("ALTER TABLE IF EXISTS agent_messages ADD COLUMN IF NOT EXISTS profile_id uuid")
-                cur.execute("ALTER TABLE IF EXISTS agent_messages ADD COLUMN IF NOT EXISTS auth_user_id text")
-                cur.execute("ALTER TABLE IF EXISTS agent_query_runs ADD COLUMN IF NOT EXISTS profile_id uuid")
-                cur.execute("ALTER TABLE IF EXISTS agent_query_runs ADD COLUMN IF NOT EXISTS auth_user_id text")
-                cur.execute("ALTER TABLE IF EXISTS agent_session_memories ADD COLUMN IF NOT EXISTS profile_id uuid")
-                cur.execute("ALTER TABLE IF EXISTS agent_session_memories ADD COLUMN IF NOT EXISTS auth_user_id text")
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS agent_query_embeddings (
-                      tenant_id text NOT NULL,
-                      query_hash text NOT NULL,
-                      normalized_query text NOT NULL,
-                      cache_identity text NOT NULL,
-                      embedding_json jsonb NOT NULL,
-                      embedding_dimensions integer NOT NULL DEFAULT 0,
-                      cache_hits integer NOT NULL DEFAULT 0,
-                      cached_at timestamptz NOT NULL DEFAULT now(),
-                      created_at timestamptz NOT NULL DEFAULT now(),
-                      updated_at timestamptz NOT NULL DEFAULT now(),
-                      PRIMARY KEY (tenant_id, query_hash, cache_identity)
-                    )
-                    """
-                )
-                cur.execute("CREATE INDEX IF NOT EXISTS idx_agent_sessions_owner ON agent_sessions(tenant_id, auth_user_id, updated_at DESC)")
-                cur.execute("CREATE INDEX IF NOT EXISTS idx_agent_sessions_owner_kind ON agent_sessions(tenant_id, auth_user_id, workspace_kind, updated_at DESC)")
-                cur.execute("CREATE INDEX IF NOT EXISTS idx_agent_messages_session_created_desc ON agent_messages(session_id, created_at DESC)")
-                cur.execute("CREATE INDEX IF NOT EXISTS idx_agent_messages_owner_created_desc ON agent_messages(auth_user_id, created_at DESC)")
-                cur.execute("CREATE INDEX IF NOT EXISTS idx_agent_query_runs_owner_created_desc ON agent_query_runs(auth_user_id, created_at DESC)")
-                cur.execute("CREATE INDEX IF NOT EXISTS idx_agent_session_memories_owner_updated_desc ON agent_session_memories(auth_user_id, updated_at DESC)")
-                cur.execute(
-                    """
-                    UPDATE agent_messages m
-                    SET profile_id = s.profile_id,
-                        auth_user_id = s.auth_user_id
-                    FROM agent_sessions s
-                    WHERE s.session_id = m.session_id
-                      AND (m.profile_id IS DISTINCT FROM s.profile_id OR m.auth_user_id IS DISTINCT FROM s.auth_user_id)
-                    """
-                )
-                cur.execute(
-                    """
-                    UPDATE agent_query_runs q
-                    SET profile_id = s.profile_id,
-                        auth_user_id = s.auth_user_id
-                    FROM agent_sessions s
-                    WHERE s.session_id = q.session_id
-                      AND (q.profile_id IS DISTINCT FROM s.profile_id OR q.auth_user_id IS DISTINCT FROM s.auth_user_id)
-                    """
-                )
-                cur.execute(
-                    """
-                    UPDATE agent_session_memories m
-                    SET profile_id = s.profile_id,
-                        auth_user_id = s.auth_user_id
-                    FROM agent_sessions s
-                    WHERE s.session_id = m.session_id
-                      AND (m.profile_id IS DISTINCT FROM s.profile_id OR m.auth_user_id IS DISTINCT FROM s.auth_user_id)
-                    """
-                )
-                cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_sensor_readings_sensor_hash ON sensor_readings(sensor_id, reading_hash)")
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS page_assets_tenant_document_page_asset_idx
-                    ON page_assets (tenant_id, document_id, page_number, asset_index)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS document_chunks_tenant_document_chunk_idx
-                    ON document_chunks (tenant_id, document_id, chunk_index)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS document_chunks_status_tenant_document_idx
-                    ON document_chunks (status, tenant_id, document_id, chunk_index)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS chunk_validations_status_chunk_idx
-                    ON chunk_validations (status, chunk_id)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS kg_assertions_chunk_status_confidence_idx
-                    ON kg_assertions (chunk_id, status, confidence DESC, created_at DESC)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS kg_assertions_subject_status_confidence_idx
-                    ON kg_assertions (subject_entity_id, status, confidence DESC, created_at DESC)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS kg_assertions_object_status_confidence_idx
-                    ON kg_assertions (object_entity_id, status, confidence DESC, created_at DESC)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS kg_assertions_document_status_confidence_idx
-                    ON kg_assertions (document_id, status, confidence DESC, created_at DESC)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS kg_assertion_evidence_assertion_created_idx
-                    ON kg_assertion_evidence (assertion_id, created_at DESC)
-                    """
-                )
-                cur.execute("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm')")
-                has_pg_trgm = bool(cur.fetchone()[0])
-                if has_pg_trgm:
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS kg_entities_canonical_name_trgm_idx
-                        ON kg_entities USING gin (canonical_name gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS kg_entities_type_trgm_idx
-                        ON kg_entities USING gin (entity_type gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS kg_assertions_object_literal_trgm_idx
-                        ON kg_assertions USING gin ((COALESCE(object_literal, '')) gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS kg_assertion_evidence_excerpt_trgm_idx
-                        ON kg_assertion_evidence USING gin (excerpt gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS document_synopses_title_trgm_idx
-                        ON document_synopses USING gin ((COALESCE(title, '')) gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS document_synopses_text_trgm_idx
-                        ON document_synopses USING gin (synopsis_text gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS document_section_synopses_title_trgm_idx
-                        ON document_section_synopses USING gin ((COALESCE(section_title, '')) gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS document_section_synopses_text_trgm_idx
-                        ON document_section_synopses USING gin (synopsis_text gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS page_assets_search_text_trgm_idx
-                        ON page_assets USING gin (search_text gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS page_assets_label_trgm_idx
-                        ON page_assets USING gin ((COALESCE(metadata_json->>'label', '')) gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS page_assets_asset_type_trgm_idx
-                        ON page_assets USING gin ((COALESCE(asset_type, '')) gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS document_chunks_text_trgm_idx
-                        ON document_chunks USING gin (text gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS document_chunks_title_trgm_idx
-                        ON document_chunks USING gin ((COALESCE(metadata_json->>'title', '')) gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS document_chunks_section_title_trgm_idx
-                        ON document_chunks USING gin ((COALESCE(metadata_json->>'section_title', '')) gin_trgm_ops)
-                        """
-                    )
-                    cur.execute(
-                        """
-                        CREATE INDEX IF NOT EXISTS document_chunks_section_heading_trgm_idx
-                        ON document_chunks USING gin ((COALESCE(metadata_json->>'section_heading', '')) gin_trgm_ops)
-                        """
-                    )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS document_synopses_tenant_updated_idx
-                    ON document_synopses (tenant_id, updated_at DESC)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS document_section_synopses_document_parent_idx
-                    ON document_section_synopses (document_id, parent_section_id)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS document_section_synopses_document_level_idx
-                    ON document_section_synopses (document_id, section_level)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS idx_corpus_snapshots_tenant_created
-                    ON corpus_snapshots(tenant_id, created_at DESC)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS idx_corpus_snapshots_document_created
-                    ON corpus_snapshots(document_id, created_at DESC)
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS idx_agent_query_embeddings_lookup
-                    ON agent_query_embeddings(tenant_id, query_hash, cached_at DESC)
-                    """
-                )
-            conn.commit()
 
     @staticmethod
     def _advisory_lock_key(*parts: str) -> int:
@@ -656,120 +350,15 @@ class Repository:
         return unique
 
     def list_admin_relations(self, *, schema_name: str | None = None, search: str | None = None) -> list[dict]:
-        clauses = ["n.nspname = ANY(%s)", "c.relkind IN ('r', 'v', 'm')"]
-        params: list[object] = [self._admin_relation_schemas(schema_name)]
-        if search:
-            clauses.append("c.relname ILIKE %s")
-            params.append(f"%{self._sanitize_text(search.strip())}%")
-        where_clause = " AND ".join(clauses)
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT
-                      n.nspname AS schema_name,
-                      c.relname AS relation_name,
-                      CASE c.relkind
-                        WHEN 'r' THEN 'table'
-                        WHEN 'v' THEN 'view'
-                        WHEN 'm' THEN 'materialized_view'
-                        ELSE c.relkind::text
-                      END AS relation_type,
-                      COALESCE(s.n_live_tup::bigint, c.reltuples::bigint, 0) AS estimated_rows,
-                      EXISTS (
-                        SELECT 1
-                        FROM pg_index idx
-                        WHERE idx.indrelid = c.oid
-                          AND idx.indisprimary
-                      ) AS has_primary_key
-                    FROM pg_class c
-                    JOIN pg_namespace n ON n.oid = c.relnamespace
-                    LEFT JOIN pg_stat_user_tables s ON s.relid = c.oid
-                    WHERE {where_clause}
-                    ORDER BY n.nspname, c.relname
-                    """,
-                    tuple(params),
-                )
-                return [dict(row) for row in cur.fetchall()]
+        return admin_inspection_store.list_admin_relations(self, schema_name=schema_name, search=search)
 
     def get_admin_relation_schema(self, relation_name: str, *, schema_name: str = "public") -> dict | None:
-        relation_name = self._sanitize_text(relation_name.strip())
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT
-                      c.relname AS relation_name,
-                      CASE c.relkind
-                        WHEN 'r' THEN 'table'
-                        WHEN 'v' THEN 'view'
-                        WHEN 'm' THEN 'materialized_view'
-                        ELSE c.relkind::text
-                      END AS relation_type
-                    FROM pg_class c
-                    JOIN pg_namespace n ON n.oid = c.relnamespace
-                    WHERE n.nspname = %s
-                      AND c.relname = %s
-                      AND c.relkind IN ('r', 'v', 'm')
-                    """,
-                    (schema_name, relation_name),
-                )
-                relation = cur.fetchone()
-                if not relation:
-                    return None
-                cur.execute(
-                    """
-                    SELECT
-                      column_name,
-                      data_type,
-                      udt_name,
-                      is_nullable,
-                      column_default,
-                      ordinal_position
-                    FROM information_schema.columns
-                    WHERE table_schema = %s
-                      AND table_name = %s
-                    ORDER BY ordinal_position
-                    """,
-                    (schema_name, relation_name),
-                )
-                columns = [dict(row) for row in cur.fetchall()]
-                cur.execute(
-                    """
-                    SELECT a.attname AS column_name
-                    FROM pg_index i
-                    JOIN pg_class c ON c.oid = i.indrelid
-                    JOIN pg_namespace n ON n.oid = c.relnamespace
-                    JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ANY(i.indkey)
-                    WHERE n.nspname = %s
-                      AND c.relname = %s
-                      AND i.indisprimary
-                    ORDER BY array_position(i.indkey, a.attnum)
-                    """,
-                    (schema_name, relation_name),
-                )
-                primary_key = [str(row["column_name"]) for row in cur.fetchall()]
-        return {
-            "schema_name": schema_name,
-            "relation_name": relation_name,
-            "relation_type": relation["relation_type"],
-            "columns": columns,
-            "primary_key": primary_key,
-        }
+        # Compatibility wrapper. New callers must use AdminInspectionStore through services.
+        return admin_inspection_store.get_admin_relation_schema(self, relation_name, schema_name=schema_name)
 
     def count_admin_relation_rows(self, relation_name: str, *, schema_name: str = "public") -> int:
-        schema = self.get_admin_relation_schema(relation_name, schema_name=schema_name)
-        if not schema:
-            raise ValueError("Relation not found")
-        query = sql.SQL("SELECT COUNT(*) AS value FROM {}.{}").format(
-            sql.Identifier(schema_name),
-            sql.Identifier(relation_name),
-        )
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(query)
-                row = cur.fetchone()
-                return int(row["value"]) if row else 0
+        # Compatibility wrapper. New callers must use AdminInspectionStore through services.
+        return admin_inspection_store.count_admin_relation_rows(self, relation_name, schema_name=schema_name)
 
     def list_admin_relation_rows(
         self,
@@ -779,52 +368,13 @@ class Repository:
         limit: int = 50,
         offset: int = 0,
     ) -> dict:
-        schema = self.get_admin_relation_schema(relation_name, schema_name=schema_name)
-        if not schema:
-            raise ValueError("Relation not found")
-        columns = [str(item["column_name"]) for item in schema["columns"]]
-        if not columns:
-            return {
-                "schema_name": schema_name,
-                "relation_name": relation_name,
-                "relation_type": schema["relation_type"],
-                "columns": [],
-                "primary_key": schema["primary_key"],
-                "rows": [],
-                "total": 0,
-                "limit": limit,
-                "offset": offset,
-            }
-        order_columns = [item for item in schema["primary_key"] if item in columns] or [columns[0]]
-        count_query = sql.SQL("SELECT COUNT(*) AS value FROM {}.{}").format(
-            sql.Identifier(schema_name),
-            sql.Identifier(relation_name),
+        return admin_inspection_store.list_admin_relation_rows(
+            self,
+            relation_name,
+            schema_name=schema_name,
+            limit=limit,
+            offset=offset,
         )
-        select_query = sql.SQL("SELECT * FROM {}.{} ORDER BY {} LIMIT %s OFFSET %s").format(
-            sql.Identifier(schema_name),
-            sql.Identifier(relation_name),
-            sql.SQL(", ").join(sql.Identifier(item) for item in order_columns),
-        )
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(count_query)
-                count_row = cur.fetchone()
-                total = int(count_row["value"]) if count_row else 0
-                cur.execute(select_query, (limit, offset))
-                rows = [self._redact_admin_relation_row(relation_name, dict(row)) for row in cur.fetchall()]
-        return {
-            "schema_name": schema_name,
-            "relation_name": relation_name,
-            "relation_type": schema["relation_type"],
-            "columns": schema["columns"],
-            "primary_key": schema["primary_key"],
-            "redacted_columns": sorted(_ADMIN_REDACTED_COLUMNS.get(relation_name, set())),
-            "rows": rows,
-            "total": total,
-            "limit": limit,
-            "offset": offset,
-            "order_by": order_columns,
-        }
 
     def _require_admin_table_schema(self, relation_name: str, *, schema_name: str = "public") -> dict:
         relation_schema = self.get_admin_relation_schema(relation_name, schema_name=schema_name)
@@ -901,24 +451,7 @@ class Repository:
         return self._redact_admin_relation_row(relation_name, dict(row)) if row else None
 
     def insert_admin_relation_row(self, relation_name: str, values: dict[str, Any], *, schema_name: str = "public") -> dict[str, Any]:
-        relation_schema = self._require_admin_table_schema(relation_name, schema_name=schema_name)
-        normalized_items = self._normalize_admin_relation_values(relation_name, relation_schema, values)
-        columns = [name for name, _ in normalized_items]
-        params = [value for _, value in normalized_items]
-        query = sql.SQL("INSERT INTO {}.{} ({}) VALUES ({}) RETURNING *").format(
-            sql.Identifier(schema_name),
-            sql.Identifier(relation_name),
-            sql.SQL(", ").join(sql.Identifier(name) for name in columns),
-            sql.SQL(", ").join(sql.SQL("%s") for _ in columns),
-        )
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, tuple(params))
-                row = cur.fetchone()
-                conn.commit()
-        if row is None:
-            raise ValueError("Row insert failed")
-        return self._redact_admin_relation_row(relation_name, dict(row))
+        return admin_inspection_store.insert_admin_relation_row(self, relation_name, values, schema_name=schema_name)
 
     def update_admin_relation_row(
         self,
@@ -928,78 +461,19 @@ class Repository:
         *,
         schema_name: str = "public",
     ) -> dict[str, Any] | None:
-        relation_schema = self._require_admin_table_schema(relation_name, schema_name=schema_name)
-        primary_key = {str(item) for item in relation_schema.get("primary_key") or []}
-        normalized_items = self._normalize_admin_relation_values(relation_name, relation_schema, values)
-        if any(column_name in primary_key for column_name, _ in normalized_items):
-            raise ValueError("Primary key columns cannot be edited through the table editor")
-        set_clauses = [sql.SQL("{} = %s").format(sql.Identifier(column_name)) for column_name, _ in normalized_items]
-        set_params = [value for _, value in normalized_items]
-        where_clauses, where_params = self._build_admin_relation_key(relation_name, relation_schema, key)
-        query = sql.SQL("UPDATE {}.{} SET {} WHERE {} RETURNING *").format(
-            sql.Identifier(schema_name),
-            sql.Identifier(relation_name),
-            sql.SQL(", ").join(set_clauses),
-            sql.SQL(" AND ").join(where_clauses),
+        return admin_inspection_store.update_admin_relation_row(
+            self,
+            relation_name,
+            key,
+            values,
+            schema_name=schema_name,
         )
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, tuple(set_params + where_params))
-                row = cur.fetchone()
-                conn.commit()
-        return self._redact_admin_relation_row(relation_name, dict(row)) if row else None
 
     def delete_admin_relation_row(self, relation_name: str, key: dict[str, Any], *, schema_name: str = "public") -> int:
-        relation_schema = self._require_admin_table_schema(relation_name, schema_name=schema_name)
-        where_clauses, where_params = self._build_admin_relation_key(relation_name, relation_schema, key)
-        query = sql.SQL("DELETE FROM {}.{} WHERE {}").format(
-            sql.Identifier(schema_name),
-            sql.Identifier(relation_name),
-            sql.SQL(" AND ").join(where_clauses),
-        )
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, tuple(where_params))
-                deleted = int(cur.rowcount or 0)
-                conn.commit()
-        return deleted
+        return admin_inspection_store.delete_admin_relation_row(self, relation_name, key, schema_name=schema_name)
 
     def execute_admin_sql(self, statement: str, *, row_limit: int = 250) -> dict[str, Any]:
-        cleaned = self._sanitize_text(str(statement or "")).strip()
-        if not cleaned:
-            raise ValueError("SQL statement is required")
-        normalized = cleaned.rstrip(";").strip()
-        if not normalized:
-            raise ValueError("SQL statement is required")
-        if ";" in normalized:
-            raise ValueError("Only one SQL statement can be executed at a time")
-        statement_type = normalized.split(None, 1)[0].lower()
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                try:
-                    cur.execute(normalized)
-                except Exception as exc:
-                    raise ValueError(str(exc)) from exc
-                if cur.description:
-                    rows = [self._redact_sensitive_json_value(dict(row)) for row in cur.fetchmany(row_limit + 1)]
-                    columns = [str(column.name) for column in cur.description]
-                    truncated = len(rows) > row_limit
-                    return {
-                        "statement_type": statement_type,
-                        "columns": columns,
-                        "rows": rows[:row_limit],
-                        "row_count": len(rows[:row_limit]),
-                        "truncated": truncated,
-                    }
-                affected_rows = int(cur.rowcount or 0) if cur.rowcount != -1 else 0
-                conn.commit()
-                return {
-                    "statement_type": statement_type,
-                    "columns": [],
-                    "rows": [],
-                    "row_count": affected_rows,
-                    "truncated": False,
-                }
+        return admin_inspection_store.execute_admin_sql(self, statement, row_limit=row_limit)
 
     @staticmethod
     def _token_hash(value: str) -> str:
@@ -1145,18 +619,18 @@ class Repository:
                 raise ValueError("Active ingestion job already exists for this document") from exc
         return job_id
 
-    def create_corpus_snapshot(
+    def _insert_corpus_snapshot_record(
         self,
+        *,
+        snapshot_id: str,
         tenant_id: str,
         snapshot_kind: str,
-        *,
+        summary: str | None = None,
         document_id: str | None = None,
         job_id: str | None = None,
-        summary: str | None = None,
         metrics: dict | None = None,
         metadata: dict | None = None,
-    ) -> str:
-        snapshot_id = str(uuid4())
+    ) -> None:
         with psycopg.connect(self.dsn) as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -1184,6 +658,74 @@ class Repository:
                         json.dumps(self._sanitize_json_value(metadata or {})),
                     ),
                 )
+            conn.commit()
+
+    def create_pending_corpus_snapshot(
+        self,
+        tenant_id: str,
+        snapshot_kind: str,
+        *,
+        document_id: str | None = None,
+        job_id: str | None = None,
+        summary: str | None = None,
+        metrics: dict | None = None,
+        metadata: dict | None = None,
+    ) -> str:
+        snapshot_id = str(uuid4())
+        pending_metadata = dict(metadata or {})
+        pending_metadata["publish_status"] = "pending"
+        self._insert_corpus_snapshot_record(
+            snapshot_id=snapshot_id,
+            tenant_id=tenant_id,
+            snapshot_kind=snapshot_kind,
+            document_id=document_id,
+            job_id=job_id,
+            summary=summary,
+            metrics=metrics,
+            metadata=pending_metadata,
+        )
+        return snapshot_id
+
+    def activate_corpus_snapshot(
+        self,
+        snapshot_id: str,
+        *,
+        document_id: str | None = None,
+        job_id: str | None = None,
+        metadata_patch: dict | None = None,
+        metrics_patch: dict | None = None,
+    ) -> None:
+        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT metadata_json, metrics_json
+                    FROM corpus_snapshots
+                    WHERE snapshot_id = %s
+                    """,
+                    (snapshot_id,),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    raise ValueError("Corpus snapshot not found")
+                metadata_json = dict(row.get("metadata_json") or {})
+                metrics_json = dict(row.get("metrics_json") or {})
+                metadata_json.update(self._sanitize_json_value(metadata_patch or {}))
+                metadata_json["publish_status"] = "active"
+                metrics_json.update(self._sanitize_json_value(metrics_patch or {}))
+                cur.execute(
+                    """
+                    UPDATE corpus_snapshots
+                    SET metadata_json = %s,
+                        metrics_json = %s
+                    WHERE snapshot_id = %s
+                    """,
+                    (
+                        json.dumps(self._sanitize_json_value(metadata_json)),
+                        json.dumps(self._sanitize_json_value(metrics_json)),
+                        snapshot_id,
+                    ),
+                )
                 if document_id:
                     cur.execute(
                         """
@@ -1205,6 +747,32 @@ class Repository:
                         (snapshot_id, job_id),
                     )
             conn.commit()
+
+    def create_corpus_snapshot(
+        self,
+        tenant_id: str,
+        snapshot_kind: str,
+        *,
+        document_id: str | None = None,
+        job_id: str | None = None,
+        summary: str | None = None,
+        metrics: dict | None = None,
+        metadata: dict | None = None,
+    ) -> str:
+        snapshot_id = self.create_pending_corpus_snapshot(
+            tenant_id,
+            snapshot_kind,
+            document_id=document_id,
+            job_id=job_id,
+            summary=summary,
+            metrics=metrics,
+            metadata=metadata,
+        )
+        self.activate_corpus_snapshot(
+            snapshot_id,
+            document_id=document_id,
+            job_id=job_id,
+        )
         return snapshot_id
 
     def get_latest_corpus_snapshot(self, tenant_id: str = "shared") -> dict | None:
@@ -3194,26 +2762,7 @@ class Repository:
                 return dict(row) if row else None
 
     def get_agent_runtime_secret(self, tenant_id: str = "shared", include_value: bool = False) -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT tenant_id, api_key_override, updated_by, created_at, updated_at
-                    FROM agent_runtime_secrets
-                    WHERE tenant_id = %s
-                    """,
-                    (tenant_id,),
-                )
-                row = cur.fetchone()
-                if not row:
-                    return None
-                payload = dict(row)
-                payload["has_api_key_override"] = bool(row.get("api_key_override"))
-                if include_value:
-                    payload["api_key_override"] = self._decrypt_runtime_secret(str(row.get("api_key_override") or ""))
-                else:
-                    payload.pop("api_key_override", None)
-                return payload
+        return runtime_config_store.get_agent_runtime_secret(self, tenant_id=tenant_id, include_value=include_value)
 
     def replace_document_source(self, document_id: str, source: SourceDocument) -> str:
         source_id = str(uuid4())
@@ -5150,132 +4699,24 @@ class Repository:
         display_name: str | None = None,
         auth_user_id: str | None = None,
     ) -> str:
-        profile_id = str(uuid4())
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO agent_profiles (profile_id, tenant_id, auth_user_id, display_name, status)
-                    VALUES (%s, %s, %s, %s, 'active')
-                    """,
-                    (
-                        profile_id,
-                        tenant_id,
-                        self._sanitize_text(auth_user_id or "") or None,
-                        self._sanitize_text(display_name or ""),
-                    ),
-                )
-            conn.commit()
-        return profile_id
+        return agent_profile_store.create_agent_profile(
+            self,
+            tenant_id=tenant_id,
+            display_name=display_name,
+            auth_user_id=auth_user_id,
+        )
 
     def set_agent_profile_token(self, profile_id: str, token: str) -> None:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE agent_profiles
-                    SET profile_token_hash = %s,
-                        profile_token_issued_at = now(),
-                        updated_at = now()
-                    WHERE profile_id = %s
-                    """,
-                    (self._token_hash(token), profile_id),
-                )
-            conn.commit()
+        agent_profile_store.set_agent_profile_token(self, profile_id, token)
 
     def verify_agent_profile_token(self, profile_id: str, token: str | None, tenant_id: str | None = None) -> bool:
-        if not token:
-            return False
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                clauses = ["profile_id = %s"]
-                params: list[object] = [profile_id]
-                if tenant_id is not None:
-                    clauses.append("tenant_id = %s")
-                    params.append(tenant_id)
-                cur.execute(
-                    f"""
-                    SELECT tenant_id, profile_token_hash, profile_token_issued_at, updated_at
-                    FROM agent_profiles
-                    WHERE {' AND '.join(clauses)}
-                    """,
-                    tuple(params),
-                )
-                row = cur.fetchone()
-                if not row:
-                    return False
-                stored = str(row.get("profile_token_hash") or "")
-                if not stored:
-                    return False
-                issued_at = row.get("profile_token_issued_at") or row.get("updated_at")
-                if isinstance(issued_at, datetime):
-                    age_seconds = (datetime.now(timezone.utc) - issued_at.astimezone(timezone.utc)).total_seconds()
-                    if age_seconds > settings.agent_profile_token_max_age_seconds:
-                        return False
-                return stored == self._token_hash(token)
+        return agent_profile_store.verify_agent_profile_token(self, profile_id, token, tenant_id=tenant_id)
 
     def get_agent_profile(self, profile_id: str, tenant_id: str | None = None) -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                clauses = ["profile_id = %s"]
-                params: list[object] = [profile_id]
-                if tenant_id is not None:
-                    clauses.append("tenant_id = %s")
-                    params.append(tenant_id)
-                cur.execute(
-                    f"""
-                    SELECT
-                      profile_id,
-                      tenant_id,
-                      auth_user_id,
-                      display_name,
-                      status,
-                      summary_json,
-                      summary_text,
-                      source_provider,
-                      source_model,
-                      prompt_version,
-                      created_at,
-                      updated_at
-                    FROM agent_profiles
-                    WHERE {' AND '.join(clauses)}
-                    """,
-                    tuple(params),
-                )
-                row = cur.fetchone()
-                return dict(row) if row else None
+        return agent_profile_store.get_agent_profile(self, profile_id, tenant_id=tenant_id)
 
     def get_agent_profile_by_auth_user(self, auth_user_id: str, tenant_id: str = "shared") -> dict | None:
-        normalized_auth_user_id = self._sanitize_text(auth_user_id or "").strip()
-        if not normalized_auth_user_id:
-            return None
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT
-                      profile_id,
-                      tenant_id,
-                      auth_user_id,
-                      display_name,
-                      status,
-                      summary_json,
-                      summary_text,
-                      source_provider,
-                      source_model,
-                      prompt_version,
-                      created_at,
-                      updated_at
-                    FROM agent_profiles
-                    WHERE tenant_id = %s
-                      AND auth_user_id = %s
-                    ORDER BY updated_at DESC, created_at DESC
-                    LIMIT 1
-                    """,
-                    (tenant_id, normalized_auth_user_id),
-                )
-                row = cur.fetchone()
-                return dict(row) if row else None
+        return agent_profile_store.get_agent_profile_by_auth_user(self, auth_user_id, tenant_id=tenant_id)
 
     def save_agent_profile(
         self,
@@ -5287,127 +4728,28 @@ class Repository:
         prompt_version: str,
         display_name: str | None = None,
     ) -> None:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE agent_profiles
-                    SET summary_json = %s,
-                        summary_text = %s,
-                        source_provider = %s,
-                        source_model = %s,
-                        prompt_version = %s,
-                        display_name = COALESCE(NULLIF(%s, ''), display_name),
-                        updated_at = now()
-                    WHERE profile_id = %s
-                    """,
-                    (
-                        json.dumps(self._sanitize_json_value(summary_json)),
-                        self._sanitize_text(summary_text),
-                        self._sanitize_text(source_provider),
-                        self._sanitize_text(source_model),
-                        self._sanitize_text(prompt_version),
-                        self._sanitize_text(display_name or ""),
-                        profile_id,
-                    ),
-                )
-            conn.commit()
+        agent_profile_store.save_agent_profile(
+            self,
+            profile_id,
+            summary_json,
+            summary_text,
+            source_provider,
+            source_model,
+            prompt_version,
+            display_name=display_name,
+        )
 
     def update_agent_profile_record(self, profile_id: str, patch: dict) -> dict | None:
-        assignments, params = self._build_allowed_patch(
-            patch,
-            allowed_fields={
-                "display_name": "display_name",
-                "auth_user_id": "auth_user_id",
-                "status": "status",
-                "summary_json": "summary_json",
-                "summary_text": "summary_text",
-                "source_provider": "source_provider",
-                "source_model": "source_model",
-                "prompt_version": "prompt_version",
-            },
-            json_fields={"summary_json"},
-            text_fields={"display_name", "auth_user_id", "status", "summary_text", "source_provider", "source_model", "prompt_version"},
-        )
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    UPDATE agent_profiles
-                    SET {", ".join(assignments)}, updated_at = now()
-                    WHERE profile_id = %s
-                    RETURNING
-                      profile_id,
-                      tenant_id,
-                      auth_user_id,
-                      display_name,
-                      status,
-                      summary_json,
-                      summary_text,
-                      source_provider,
-                      source_model,
-                      prompt_version,
-                      created_at,
-                      updated_at
-                    """,
-                    tuple(params + [profile_id]),
-                )
-                row = cur.fetchone()
-            conn.commit()
-        return dict(row) if row else None
+        return agent_profile_store.update_agent_profile_record(self, profile_id, patch)
 
     def list_agent_profiles(self, tenant_id: str = "shared", status: str | None = None, limit: int = 100, offset: int = 0) -> list[dict]:
-        clauses: list[str] = ["p.tenant_id = %s"]
-        params: list[object] = [tenant_id]
-        if status:
-            clauses.append("p.status = %s")
-            params.append(status)
-        where_clause = "WHERE " + " AND ".join(clauses)
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT
-                      p.profile_id,
-                      p.tenant_id,
-                      p.auth_user_id,
-                      p.display_name,
-                      p.status,
-                      p.summary_json,
-                      p.summary_text,
-                      p.source_provider,
-                      p.source_model,
-                      p.prompt_version,
-                      p.created_at,
-                      p.updated_at,
-                      COUNT(DISTINCT s.session_id) AS session_count
-                    FROM agent_profiles p
-                    LEFT JOIN agent_sessions s ON s.profile_id = p.profile_id
-                    {where_clause}
-                    GROUP BY p.profile_id
-                    ORDER BY p.updated_at DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    tuple(params + [limit, offset]),
-                )
-                return [dict(row) for row in cur.fetchall()]
+        return agent_profile_store.list_agent_profiles(self, tenant_id=tenant_id, status=status, limit=limit, offset=offset)
 
     def count_agent_profiles(self, tenant_id: str = "shared", status: str | None = None) -> int:
-        clauses: list[str] = ["tenant_id = %s"]
-        params: list[object] = [tenant_id]
-        if status:
-            clauses.append("status = %s")
-            params.append(status)
-        where_clause = "WHERE " + " AND ".join(clauses)
-        return self._fetch_scalar(f"SELECT COUNT(*) AS value FROM agent_profiles {where_clause}", tuple(params))
+        return agent_profile_store.count_agent_profiles(self, tenant_id=tenant_id, status=status)
 
     def delete_agent_profile(self, profile_id: str) -> int:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM agent_profiles WHERE profile_id = %s", (profile_id,))
-                deleted = cur.rowcount
-            conn.commit()
-        return deleted
+        return agent_profile_store.delete_agent_profile(self, profile_id)
 
     def upsert_user_place(
         self,
@@ -5419,49 +4761,15 @@ class Repository:
         status: str = "active",
         metadata_json: dict[str, Any] | None = None,
     ) -> dict:
-        normalized_tenant_id = self._sanitize_text(tenant_id or "").strip() or "shared"
-        normalized_auth_user_id = self._sanitize_text(auth_user_id or "").strip()
-        normalized_external_place_id = self._sanitize_text(external_place_id or "").strip()[:160]
-        normalized_place_name = self._sanitize_text(place_name or "").strip()[:160]
-        normalized_status = self._normalize_sensor_status(status)
-        if not normalized_auth_user_id:
-            raise ValueError("auth_user_id is required")
-        if not normalized_external_place_id:
-            raise ValueError("external_place_id is required")
-        if not normalized_place_name:
-            raise ValueError("place_name is required")
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO user_places (
-                      tenant_id,
-                      auth_user_id,
-                      external_place_id,
-                      place_name,
-                      status,
-                      metadata_json
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (tenant_id, auth_user_id, external_place_id) DO UPDATE SET
-                      place_name = EXCLUDED.place_name,
-                      status = EXCLUDED.status,
-                      metadata_json = EXCLUDED.metadata_json,
-                      updated_at = now()
-                    RETURNING *
-                    """,
-                    (
-                        normalized_tenant_id,
-                        normalized_auth_user_id,
-                        normalized_external_place_id,
-                        normalized_place_name,
-                        normalized_status,
-                        Jsonb(self._sanitize_json_value(metadata_json or {})),
-                    ),
-                )
-                row = cur.fetchone()
-            conn.commit()
-        return dict(row) if row else {}
+        return workspace_store.upsert_user_place(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            external_place_id=external_place_id,
+            place_name=place_name,
+            status=status,
+            metadata_json=metadata_json,
+        )
 
     def list_user_places(
         self,
@@ -5472,50 +4780,24 @@ class Repository:
         limit: int = 100,
         offset: int = 0,
     ) -> list[dict]:
-        clauses = ["tenant_id = %s", "auth_user_id = %s"]
-        params: list[object] = [tenant_id, auth_user_id]
-        if status:
-            clauses.append("status = %s")
-            params.append(self._normalize_sensor_status(status))
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT *
-                    FROM user_places
-                    WHERE {' AND '.join(clauses)}
-                    ORDER BY updated_at DESC, created_at DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    tuple(params + [limit, offset]),
-                )
-                return [dict(row) for row in cur.fetchall()]
+        return workspace_store.list_user_places(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            status=status,
+            limit=limit,
+            offset=offset,
+        )
 
     def get_user_place(self, place_id: str, *, tenant_id: str, auth_user_id: str) -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM user_places
-                    WHERE place_id = %s
-                      AND tenant_id = %s
-                      AND auth_user_id = %s
-                    """,
-                    (place_id, tenant_id, auth_user_id),
-                )
-                row = cur.fetchone()
-                return dict(row) if row else None
+        return workspace_store.get_user_place(self, place_id, tenant_id=tenant_id, auth_user_id=auth_user_id)
 
     def count_user_places(self, *, tenant_id: str, auth_user_id: str, status: str | None = None) -> int:
-        clauses = ["tenant_id = %s", "auth_user_id = %s"]
-        params: list[object] = [tenant_id, auth_user_id]
-        if status:
-            clauses.append("status = %s")
-            params.append(self._normalize_sensor_status(status))
-        return self._fetch_scalar(
-            f"SELECT COUNT(*) AS value FROM user_places WHERE {' AND '.join(clauses)}",
-            tuple(params),
+        return workspace_store.count_user_places(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            status=status,
         )
 
     def upsert_user_hive(
@@ -5529,57 +4811,16 @@ class Repository:
         status: str = "active",
         metadata_json: dict[str, Any] | None = None,
     ) -> dict:
-        normalized_tenant_id = self._sanitize_text(tenant_id or "").strip() or "shared"
-        normalized_auth_user_id = self._sanitize_text(auth_user_id or "").strip()
-        normalized_external_hive_id = self._sanitize_text(external_hive_id or "").strip()[:160]
-        normalized_hive_name = self._sanitize_text(hive_name or "").strip()[:160]
-        normalized_status = self._normalize_sensor_status(status)
-        if not normalized_auth_user_id:
-            raise ValueError("auth_user_id is required")
-        if not normalized_external_hive_id:
-            raise ValueError("external_hive_id is required")
-        if not normalized_hive_name:
-            raise ValueError("hive_name is required")
-        place_row = None
-        if place_id:
-            place_row = self.get_user_place(place_id, tenant_id=normalized_tenant_id, auth_user_id=normalized_auth_user_id)
-            if place_row is None:
-                raise ValueError("Place not found")
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO user_hives (
-                      tenant_id,
-                      auth_user_id,
-                      external_hive_id,
-                      hive_name,
-                      place_id,
-                      status,
-                      metadata_json
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (tenant_id, auth_user_id, external_hive_id) DO UPDATE SET
-                      hive_name = EXCLUDED.hive_name,
-                      place_id = EXCLUDED.place_id,
-                      status = EXCLUDED.status,
-                      metadata_json = EXCLUDED.metadata_json,
-                      updated_at = now()
-                    RETURNING *
-                    """,
-                    (
-                        normalized_tenant_id,
-                        normalized_auth_user_id,
-                        normalized_external_hive_id,
-                        normalized_hive_name,
-                        str((place_row or {}).get("place_id") or "") or None,
-                        normalized_status,
-                        Jsonb(self._sanitize_json_value(metadata_json or {})),
-                    ),
-                )
-                row = cur.fetchone()
-            conn.commit()
-        return dict(row) if row else {}
+        return workspace_store.upsert_user_hive(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            external_hive_id=external_hive_id,
+            hive_name=hive_name,
+            place_id=place_id,
+            status=status,
+            metadata_json=metadata_json,
+        )
 
     def list_user_hives(
         self,
@@ -5591,59 +4832,18 @@ class Repository:
         limit: int = 100,
         offset: int = 0,
     ) -> list[dict]:
-        clauses = ["h.tenant_id = %s", "h.auth_user_id = %s"]
-        params: list[object] = [tenant_id, auth_user_id]
-        if status:
-            clauses.append("h.status = %s")
-            params.append(self._normalize_sensor_status(status))
-        if place_id:
-            clauses.append("h.place_id = %s")
-            params.append(place_id)
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT
-                      h.*,
-                      COALESCE(p.place_name, NULL) AS resolved_place_name,
-                      p.place_name,
-                      p.external_place_id
-                    FROM user_hives h
-                    LEFT JOIN user_places p
-                      ON p.place_id = h.place_id
-                     AND p.tenant_id = h.tenant_id
-                     AND p.auth_user_id = h.auth_user_id
-                    WHERE {' AND '.join(clauses)}
-                    ORDER BY h.updated_at DESC, h.created_at DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    tuple(params + [limit, offset]),
-                )
-                return [dict(row) for row in cur.fetchall()]
+        return workspace_store.list_user_hives(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            status=status,
+            place_id=place_id,
+            limit=limit,
+            offset=offset,
+        )
 
     def get_user_hive(self, hive_id: str, *, tenant_id: str, auth_user_id: str) -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT
-                      h.*,
-                      COALESCE(p.place_name, NULL) AS resolved_place_name,
-                      p.place_name,
-                      p.external_place_id
-                    FROM user_hives h
-                    LEFT JOIN user_places p
-                      ON p.place_id = h.place_id
-                     AND p.tenant_id = h.tenant_id
-                     AND p.auth_user_id = h.auth_user_id
-                    WHERE h.hive_id = %s
-                      AND h.tenant_id = %s
-                      AND h.auth_user_id = %s
-                    """,
-                    (hive_id, tenant_id, auth_user_id),
-                )
-                row = cur.fetchone()
-                return dict(row) if row else None
+        return workspace_store.get_user_hive(self, hive_id, tenant_id=tenant_id, auth_user_id=auth_user_id)
 
     def count_user_hives(
         self,
@@ -5653,17 +4853,12 @@ class Repository:
         status: str | None = None,
         place_id: str | None = None,
     ) -> int:
-        clauses = ["tenant_id = %s", "auth_user_id = %s"]
-        params: list[object] = [tenant_id, auth_user_id]
-        if status:
-            clauses.append("status = %s")
-            params.append(self._normalize_sensor_status(status))
-        if place_id:
-            clauses.append("place_id = %s")
-            params.append(place_id)
-        return self._fetch_scalar(
-            f"SELECT COUNT(*) AS value FROM user_hives WHERE {' AND '.join(clauses)}",
-            tuple(params),
+        return workspace_store.count_user_hives(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            status=status,
+            place_id=place_id,
         )
 
     def upsert_user_sensor(
@@ -5681,84 +4876,20 @@ class Repository:
         status: str = "active",
         metadata_json: dict[str, Any] | None = None,
     ) -> dict:
-        normalized_tenant_id = self._sanitize_text(tenant_id or "").strip() or "shared"
-        normalized_auth_user_id = self._sanitize_text(auth_user_id or "").strip()
-        normalized_external_sensor_id = self._sanitize_text(external_sensor_id or "").strip()[:160]
-        normalized_sensor_name = self._sanitize_text(sensor_name or "").strip()[:160]
-        normalized_sensor_type = self._sanitize_text(sensor_type or "environment").strip().lower()[:64] or "environment"
-        normalized_status = self._normalize_sensor_status(status)
-        place_row = None
-        hive_row = None
-        if not normalized_auth_user_id:
-            raise ValueError("auth_user_id is required")
-        if not normalized_external_sensor_id:
-            raise ValueError("external_sensor_id is required")
-        if not normalized_sensor_name:
-            raise ValueError("sensor_name is required")
-        if place_id:
-            place_row = self.get_user_place(place_id, tenant_id=normalized_tenant_id, auth_user_id=normalized_auth_user_id)
-            if place_row is None:
-                raise ValueError("Place not found")
-        if hive_id:
-            hive_row = self.get_user_hive(hive_id, tenant_id=normalized_tenant_id, auth_user_id=normalized_auth_user_id)
-            if hive_row is None:
-                raise ValueError("Hive not found")
-            hive_place_id = str(hive_row.get("place_id") or "").strip() or None
-            if place_row and hive_place_id and hive_place_id != str(place_row.get("place_id") or ""):
-                raise ValueError("Hive does not belong to the selected place")
-            if place_row is None and hive_place_id:
-                place_row = self.get_user_place(hive_place_id, tenant_id=normalized_tenant_id, auth_user_id=normalized_auth_user_id)
-            elif place_row and not hive_place_id:
-                raise ValueError("Hive must be assigned to the selected place before sensor registration")
-        effective_hive_name = self._sanitize_text(str((hive_row or {}).get("hive_name") or hive_name or "")).strip()[:160] or None
-        effective_location_label = self._sanitize_text(str((place_row or {}).get("place_name") or location_label or "")).strip()[:160] or None
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO user_sensors (
-                      tenant_id,
-                      auth_user_id,
-                      external_sensor_id,
-                      sensor_name,
-                      sensor_type,
-                      place_id,
-                      hive_id,
-                      hive_name,
-                      location_label,
-                      status,
-                      metadata_json
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (tenant_id, auth_user_id, external_sensor_id) DO UPDATE SET
-                      sensor_name = EXCLUDED.sensor_name,
-                      sensor_type = EXCLUDED.sensor_type,
-                      place_id = EXCLUDED.place_id,
-                      hive_id = EXCLUDED.hive_id,
-                      hive_name = EXCLUDED.hive_name,
-                      location_label = EXCLUDED.location_label,
-                      status = EXCLUDED.status,
-                      metadata_json = EXCLUDED.metadata_json,
-                      updated_at = now()
-                    RETURNING *
-                    """,
-                    (
-                        normalized_tenant_id,
-                        normalized_auth_user_id,
-                        normalized_external_sensor_id,
-                        normalized_sensor_name,
-                        normalized_sensor_type,
-                        str((place_row or {}).get("place_id") or "") or None,
-                        str((hive_row or {}).get("hive_id") or "") or None,
-                        effective_hive_name,
-                        effective_location_label,
-                        normalized_status,
-                        Jsonb(self._sanitize_json_value(metadata_json or {})),
-                    ),
-                )
-                row = cur.fetchone()
-            conn.commit()
-        return dict(row) if row else {}
+        return workspace_store.upsert_user_sensor(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            external_sensor_id=external_sensor_id,
+            sensor_name=sensor_name,
+            sensor_type=sensor_type,
+            place_id=place_id,
+            hive_id=hive_id,
+            hive_name=hive_name,
+            location_label=location_label,
+            status=status,
+            metadata_json=metadata_json,
+        )
 
     def list_user_sensors(
         self,
@@ -5769,95 +4900,24 @@ class Repository:
         limit: int = 100,
         offset: int = 0,
     ) -> list[dict]:
-        clauses = ["tenant_id = %s", "auth_user_id = %s"]
-        params: list[object] = [tenant_id, auth_user_id]
-        if status:
-            clauses.append("status = %s")
-            params.append(self._normalize_sensor_status(status))
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT
-                      s.*,
-                      COALESCE(p.place_name, s.location_label) AS resolved_place_name,
-                      p.place_name,
-                      p.external_place_id,
-                      COALESCE(h.hive_name, s.hive_name) AS resolved_hive_name,
-                      h.hive_name AS linked_hive_name,
-                      h.external_hive_id
-                    FROM user_sensors s
-                    LEFT JOIN user_places p
-                      ON p.place_id = s.place_id
-                     AND p.tenant_id = s.tenant_id
-                     AND p.auth_user_id = s.auth_user_id
-                    LEFT JOIN user_hives h
-                      ON h.hive_id = s.hive_id
-                     AND h.tenant_id = s.tenant_id
-                     AND h.auth_user_id = s.auth_user_id
-                    WHERE {' AND '.join(f's.{clause}' for clause in clauses)}
-                    ORDER BY s.updated_at DESC, s.created_at DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    tuple(params + [limit, offset]),
-                )
-                rows = [dict(row) for row in cur.fetchall()]
-        for row in rows:
-            resolved_place_name = str(row.get("resolved_place_name") or row.get("place_name") or row.get("location_label") or "").strip()
-            resolved_hive_name = str(row.get("resolved_hive_name") or row.get("linked_hive_name") or row.get("hive_name") or "").strip()
-            row["place_name"] = resolved_place_name
-            row["location_label"] = resolved_place_name
-            row["hive_name"] = resolved_hive_name
-        return rows
+        return workspace_store.list_user_sensors(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            status=status,
+            limit=limit,
+            offset=offset,
+        )
 
     def get_user_sensor(self, sensor_id: str, *, tenant_id: str, auth_user_id: str) -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT
-                      s.*,
-                      COALESCE(p.place_name, s.location_label) AS resolved_place_name,
-                      p.place_name,
-                      p.external_place_id,
-                      COALESCE(h.hive_name, s.hive_name) AS resolved_hive_name,
-                      h.hive_name AS linked_hive_name,
-                      h.external_hive_id
-                    FROM user_sensors s
-                    LEFT JOIN user_places p
-                      ON p.place_id = s.place_id
-                     AND p.tenant_id = s.tenant_id
-                     AND p.auth_user_id = s.auth_user_id
-                    LEFT JOIN user_hives h
-                      ON h.hive_id = s.hive_id
-                     AND h.tenant_id = s.tenant_id
-                     AND h.auth_user_id = s.auth_user_id
-                    WHERE s.sensor_id = %s
-                      AND s.tenant_id = %s
-                      AND s.auth_user_id = %s
-                    """,
-                    (sensor_id, tenant_id, auth_user_id),
-                )
-                row = cur.fetchone()
-        if not row:
-            return None
-        data = dict(row)
-        resolved_place_name = str(data.get("resolved_place_name") or data.get("place_name") or data.get("location_label") or "").strip()
-        resolved_hive_name = str(data.get("resolved_hive_name") or data.get("linked_hive_name") or data.get("hive_name") or "").strip()
-        data["place_name"] = resolved_place_name
-        data["location_label"] = resolved_place_name
-        data["hive_name"] = resolved_hive_name
-        return data
+        return workspace_store.get_user_sensor(self, sensor_id, tenant_id=tenant_id, auth_user_id=auth_user_id)
 
     def count_user_sensors(self, *, tenant_id: str, auth_user_id: str, status: str | None = None) -> int:
-        clauses = ["tenant_id = %s", "auth_user_id = %s"]
-        params: list[object] = [tenant_id, auth_user_id]
-        if status:
-            clauses.append("status = %s")
-            params.append(self._normalize_sensor_status(status))
-        return self._fetch_scalar(
-            f"SELECT COUNT(*) AS value FROM user_sensors WHERE {' AND '.join(clauses)}",
-            tuple(params),
+        return workspace_store.count_user_sensors(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            status=status,
         )
 
     def save_sensor_readings(
@@ -5868,78 +4928,13 @@ class Repository:
         auth_user_id: str,
         readings: list[dict[str, Any]],
     ) -> list[dict]:
-        if not readings:
-            return []
-        if len(readings) > settings.sensor_ingest_max_batch:
-            raise ValueError(f"At most {settings.sensor_ingest_max_batch} readings are allowed per request")
-        sensor_row = self.get_user_sensor(sensor_id, tenant_id=tenant_id, auth_user_id=auth_user_id)
-        if sensor_row is None:
-            raise ValueError("Sensor not found")
-        inserted: list[dict] = []
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                for reading in readings:
-                    observed_at = self._coerce_sensor_observed_at(reading.get("observed_at"))
-                    metric_name = self._sanitize_text(str(reading.get("metric_name") or "")).strip().lower()[:80]
-                    unit = self._sanitize_text(str(reading.get("unit") or "")).strip()[:32] or None
-                    text_value = self._sanitize_text(str(reading.get("text_value") or "")).strip()[:4000] or None
-                    numeric_value = reading.get("numeric_value")
-                    quality_score = reading.get("quality_score")
-                    if not metric_name:
-                        raise ValueError("metric_name is required for each reading")
-                    if numeric_value in ("", None) and text_value is None:
-                        raise ValueError("Each reading requires numeric_value or text_value")
-                    normalized_numeric_value = None if numeric_value in ("", None) else float(numeric_value)
-                    reading_hash = self._sensor_reading_hash(
-                        observed_at=observed_at,
-                        metric_name=metric_name,
-                        unit=unit,
-                        numeric_value=normalized_numeric_value,
-                        text_value=text_value,
-                    )
-                    cur.execute(
-                        """
-                        INSERT INTO sensor_readings (
-                          sensor_id,
-                          tenant_id,
-                          auth_user_id,
-                          reading_hash,
-                          observed_at,
-                          metric_name,
-                          unit,
-                          numeric_value,
-                          text_value,
-                          quality_score,
-                          metadata_json
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (sensor_id, reading_hash) DO UPDATE SET
-                          quality_score = COALESCE(EXCLUDED.quality_score, sensor_readings.quality_score),
-                          metadata_json = CASE
-                            WHEN EXCLUDED.metadata_json = '{}'::jsonb THEN sensor_readings.metadata_json
-                            ELSE EXCLUDED.metadata_json
-                          END
-                        RETURNING *
-                        """,
-                        (
-                            sensor_id,
-                            tenant_id,
-                            auth_user_id,
-                            reading_hash,
-                            observed_at,
-                            metric_name,
-                            unit,
-                            normalized_numeric_value,
-                            text_value,
-                            None if quality_score in ("", None) else float(quality_score),
-                            Jsonb(self._sanitize_json_value(reading.get("metadata_json") or {})),
-                        ),
-                    )
-                    row = cur.fetchone()
-                    if row:
-                        inserted.append(dict(row))
-            conn.commit()
-        return inserted
+        return workspace_store.save_sensor_readings(
+            self,
+            sensor_id=sensor_id,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            readings=readings,
+        )
 
     def list_sensor_readings(
         self,
@@ -5953,33 +4948,17 @@ class Repository:
         limit: int = 200,
         offset: int = 0,
     ) -> list[dict]:
-        clauses = ["tenant_id = %s", "auth_user_id = %s"]
-        params: list[object] = [tenant_id, auth_user_id]
-        if sensor_id:
-            clauses.append("sensor_id = %s")
-            params.append(sensor_id)
-        if metric_name:
-            clauses.append("metric_name = %s")
-            params.append(self._sanitize_text(metric_name).strip().lower())
-        if start_at is not None:
-            clauses.append("observed_at >= %s")
-            params.append(start_at)
-        if end_at is not None:
-            clauses.append("observed_at <= %s")
-            params.append(end_at)
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT *
-                    FROM sensor_readings
-                    WHERE {' AND '.join(clauses)}
-                    ORDER BY observed_at DESC, created_at DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    tuple(params + [limit, offset]),
-                )
-                return [dict(row) for row in cur.fetchall()]
+        return workspace_store.list_sensor_readings(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            sensor_id=sensor_id,
+            metric_name=metric_name,
+            start_at=start_at,
+            end_at=end_at,
+            limit=limit,
+            offset=offset,
+        )
 
     def build_user_sensor_context(
         self,
@@ -5991,174 +4970,15 @@ class Repository:
         hours: int,
         points_per_metric: int,
     ) -> list[dict]:
-        sensors = self.list_user_sensors(tenant_id=tenant_id, auth_user_id=auth_user_id, status="active", limit=200, offset=0)
-        if not sensors:
-            return []
-        sensor_by_id = {str(row["sensor_id"]): row for row in sensors}
-        start_at = datetime.now(timezone.utc) - timedelta(hours=max(1, hours))
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    WITH ranked AS (
-                      SELECT
-                        r.*,
-                        ROW_NUMBER() OVER (
-                          PARTITION BY r.sensor_id, r.metric_name
-                          ORDER BY r.observed_at DESC, r.created_at DESC
-                        ) AS rn
-                      FROM sensor_readings r
-                      JOIN user_sensors s
-                        ON s.sensor_id = r.sensor_id
-                       AND s.tenant_id = r.tenant_id
-                       AND s.auth_user_id = r.auth_user_id
-                      WHERE r.tenant_id = %s
-                        AND r.auth_user_id = %s
-                        AND r.observed_at >= %s
-                        AND s.status = 'active'
-                    )
-                    SELECT *
-                    FROM ranked
-                    WHERE rn <= %s
-                    ORDER BY observed_at DESC, created_at DESC
-                    """,
-                    (
-                        tenant_id,
-                        auth_user_id,
-                        start_at,
-                        max(1, points_per_metric),
-                    ),
-                )
-                readings = [dict(row) for row in cur.fetchall()]
-        grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
-        for row in readings:
-            sensor_id = str(row.get("sensor_id") or "")
-            metric_name = str(row.get("metric_name") or "")
-            if sensor_id not in sensor_by_id or not metric_name:
-                continue
-            grouped.setdefault((sensor_id, metric_name), []).append(row)
-        query_terms = {
-            token
-            for token in re.findall(r"[a-z0-9%:/\.-]{2,}", self._sanitize_text(normalized_query).lower())
-            if token
-        }
-        rows: list[dict[str, Any]] = []
-        for (sensor_id, metric_name), metric_rows in grouped.items():
-            sensor = sensor_by_id[sensor_id]
-            resolved_place_name = str(sensor.get("resolved_place_name") or sensor.get("place_name") or sensor.get("location_label") or "").strip()
-            resolved_hive_name = str(sensor.get("resolved_hive_name") or sensor.get("linked_hive_name") or sensor.get("hive_name") or "").strip()
-            metric_rows.sort(key=lambda item: item.get("observed_at") or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
-            latest = metric_rows[0]
-            numeric_values = [float(row["numeric_value"]) for row in metric_rows if row.get("numeric_value") is not None]
-            recent_points = []
-            for row in metric_rows[: max(1, points_per_metric)]:
-                point_value = row.get("numeric_value")
-                if point_value is None:
-                    point_value = row.get("text_value")
-                recent_points.append(
-                    {
-                        "reading_id": str(row.get("reading_id") or ""),
-                        "observed_at": row.get("observed_at"),
-                        "value": point_value,
-                    }
-                )
-            summary_parts = [
-                f"sensor {sensor.get('sensor_name')}",
-                f"type {sensor.get('sensor_type')}",
-                f"metric {metric_name}",
-            ]
-            if resolved_place_name:
-                summary_parts.append(f"place {resolved_place_name}")
-            if resolved_hive_name:
-                summary_parts.append(f"hive {resolved_hive_name}")
-            latest_value = latest.get("numeric_value")
-            if latest_value is None:
-                latest_value = latest.get("text_value")
-            summary_parts.append(f"latest {latest_value}")
-            if latest.get("unit"):
-                summary_parts.append(str(latest.get("unit")))
-            summary_parts.append(f"at {latest.get('observed_at')}")
-            if numeric_values:
-                summary_parts.append(
-                    "window stats "
-                    + json.dumps(
-                        {
-                            "count": len(numeric_values),
-                            "min": round(min(numeric_values), 4),
-                            "max": round(max(numeric_values), 4),
-                            "avg": round(sum(numeric_values) / len(numeric_values), 4),
-                            "delta": round(numeric_values[0] - numeric_values[-1], 4) if len(numeric_values) > 1 else 0.0,
-                        },
-                        ensure_ascii=False,
-                    )
-                )
-            row_text = " | ".join(str(part) for part in summary_parts if str(part).strip())
-            sensor_terms = {
-                token
-                for token in re.findall(
-                    r"[a-z0-9%:/\.-]{2,}",
-                    " ".join(
-                        str(value or "")
-                        for value in [
-                            sensor.get("sensor_name"),
-                            sensor.get("sensor_type"),
-                            resolved_place_name,
-                            sensor.get("external_place_id"),
-                            resolved_hive_name,
-                            sensor.get("external_hive_id"),
-                            metric_name,
-                            latest.get("unit"),
-                        ]
-                    ).lower(),
-                )
-            }
-            overlap = len(query_terms & sensor_terms)
-            freshness_bonus = 0.0
-            observed_at = latest.get("observed_at")
-            if isinstance(observed_at, datetime):
-                age_hours = max(0.0, (datetime.now(timezone.utc) - observed_at.astimezone(timezone.utc)).total_seconds() / 3600.0)
-                freshness_bonus = max(0.0, 1.5 - min(age_hours / 24.0, 1.5))
-            score = overlap * 2.5 + freshness_bonus + (0.6 if metric_name in {"temperature", "humidity", "weight"} else 0.0)
-            rows.append(
-                {
-                    "sensor_row_id": f"{sensor_id}:{metric_name}",
-                    "sensor_id": sensor_id,
-                    "reading_ids": [str(item.get("reading_id") or "") for item in metric_rows[: max(1, points_per_metric)]],
-                    "tenant_id": tenant_id,
-                    "auth_user_id": auth_user_id,
-                    "sensor_name": str(sensor.get("sensor_name") or ""),
-                    "sensor_type": str(sensor.get("sensor_type") or ""),
-                    "place_id": str(sensor.get("place_id") or ""),
-                    "place_name": resolved_place_name,
-                    "external_place_id": str(sensor.get("external_place_id") or ""),
-                    "hive_id": str(sensor.get("hive_id") or ""),
-                    "external_hive_id": str(sensor.get("external_hive_id") or ""),
-                    "hive_name": resolved_hive_name,
-                    "location_label": resolved_place_name,
-                    "metric_name": metric_name,
-                    "unit": latest.get("unit"),
-                    "latest_value": latest_value,
-                    "latest_observed_at": latest.get("observed_at"),
-                    "window_start_at": metric_rows[-1].get("observed_at"),
-                    "window_end_at": metric_rows[0].get("observed_at"),
-                    "sample_count": len(metric_rows),
-                    "min_value": round(min(numeric_values), 4) if numeric_values else None,
-                    "max_value": round(max(numeric_values), 4) if numeric_values else None,
-                    "avg_value": round(sum(numeric_values) / len(numeric_values), 4) if numeric_values else None,
-                    "delta_value": round(numeric_values[0] - numeric_values[-1], 4) if len(numeric_values) > 1 else None,
-                    "recent_points": recent_points,
-                    "summary_text": row_text,
-                    "_relevance_score": round(score, 6),
-                }
-            )
-        rows.sort(
-            key=lambda item: (
-                float(item.get("_relevance_score") or 0.0),
-                str(item.get("latest_observed_at") or ""),
-            ),
-            reverse=True,
+        return workspace_store.build_user_sensor_context(
+            self,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            normalized_query=normalized_query,
+            max_rows=max_rows,
+            hours=hours,
+            points_per_metric=points_per_metric,
         )
-        return rows[: max(0, max_rows)]
 
     def create_agent_session(
         self,
@@ -6168,68 +4988,20 @@ class Repository:
         auth_user_id: str | None = None,
         workspace_kind: str = "general",
     ) -> str:
-        # Sessions isolate chat history and concurrency for one tenant-scoped conversation.
-        session_id = str(uuid4())
-        normalized_auth_user_id = self._sanitize_text(auth_user_id or "").strip() or None
-        normalized_workspace_kind = self._sanitize_text(workspace_kind or "general").strip().lower() or "general"
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                if profile_id:
-                    cur.execute(
-                        "SELECT auth_user_id FROM agent_profiles WHERE profile_id = %s AND tenant_id = %s",
-                        (profile_id, tenant_id),
-                    )
-                    profile_row = cur.fetchone()
-                    if profile_row is None:
-                        raise ValueError("Profile tenant mismatch")
-                    profile_auth_user_id = self._sanitize_text(str(profile_row[0] or "")).strip() or None
-                    if normalized_auth_user_id and profile_auth_user_id and profile_auth_user_id != normalized_auth_user_id:
-                        raise ValueError("Session owner does not match profile owner")
-                    normalized_auth_user_id = normalized_auth_user_id or profile_auth_user_id
-                cur.execute(
-                    """
-                    INSERT INTO agent_sessions (session_id, tenant_id, auth_user_id, profile_id, workspace_kind, title, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
-                    """,
-                    (session_id, tenant_id, normalized_auth_user_id, profile_id, normalized_workspace_kind, self._sanitize_text(title or "")),
-                )
-            conn.commit()
-        return session_id
+        return agent_session_store.create_agent_session(
+            self,
+            tenant_id=tenant_id,
+            title=title,
+            profile_id=profile_id,
+            auth_user_id=auth_user_id,
+            workspace_kind=workspace_kind,
+        )
 
     def set_agent_session_token(self, session_id: str, token: str) -> None:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE agent_sessions
-                    SET session_token_hash = %s,
-                        session_token_issued_at = now(),
-                        updated_at = now()
-                    WHERE session_id = %s
-                    """,
-                    (self._token_hash(token), session_id),
-                )
-            conn.commit()
+        agent_session_store.set_agent_session_token(self, session_id, token)
 
     def bind_agent_session_auth_user(self, session_id: str, auth_user_id: str) -> None:
-        normalized_auth_user_id = self._sanitize_text(auth_user_id or "").strip()
-        if not normalized_auth_user_id:
-            raise ValueError("auth_user_id is required")
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE agent_sessions
-                    SET auth_user_id = %s,
-                        updated_at = now()
-                    WHERE session_id = %s
-                      AND (auth_user_id IS NULL OR auth_user_id = %s)
-                    """,
-                    (normalized_auth_user_id, session_id, normalized_auth_user_id),
-                )
-                if cur.rowcount == 0:
-                    raise ValueError("Session owner mismatch")
-            conn.commit()
+        agent_session_store.bind_agent_session_auth_user(self, session_id, auth_user_id)
 
     def verify_agent_session_token(
         self,
@@ -6238,148 +5010,25 @@ class Repository:
         tenant_id: str | None = None,
         auth_user_id: str | None = None,
     ) -> bool:
-        if not token:
-            return False
-        normalized_auth_user_id = self._sanitize_text(auth_user_id or "").strip() or None
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                clauses = ["session_id = %s"]
-                params: list[object] = [session_id]
-                if tenant_id is not None:
-                    clauses.append("tenant_id = %s")
-                    params.append(tenant_id)
-                cur.execute(
-                    f"""
-                    SELECT tenant_id, auth_user_id, session_token_hash, session_token_issued_at, updated_at
-                    FROM agent_sessions
-                    WHERE {' AND '.join(clauses)}
-                    """,
-                    tuple(params),
-                )
-                row = cur.fetchone()
-                if not row:
-                    return False
-                stored = str(row.get("session_token_hash") or "")
-                if not stored:
-                    return False
-                issued_at = row.get("session_token_issued_at") or row.get("updated_at")
-                if isinstance(issued_at, datetime):
-                    age_seconds = (datetime.now(timezone.utc) - issued_at.astimezone(timezone.utc)).total_seconds()
-                    if age_seconds > settings.agent_session_token_max_age_seconds:
-                        return False
-                stored_auth_user_id = self._sanitize_text(str(row.get("auth_user_id") or "")).strip() or None
-                if normalized_auth_user_id and stored_auth_user_id and stored_auth_user_id != normalized_auth_user_id:
-                    return False
-                return stored == self._token_hash(token)
+        return agent_session_store.verify_agent_session_token(
+            self,
+            session_id,
+            token,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+        )
 
     def claim_agent_session(self, session_id: str, worker_id: str, lease_seconds: int) -> bool:
-        # Session leasing mirrors job leasing: it serializes turn writes per session.
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT claimed_by, lease_expires_at
-                    FROM agent_sessions
-                    WHERE session_id = %s
-                    FOR UPDATE
-                    """,
-                    (session_id,),
-                )
-                row = cur.fetchone()
-                if row is None:
-                    raise ValueError("Session not found")
-
-                claimed_by, lease_expires_at = row
-                if claimed_by and claimed_by != worker_id and lease_expires_at is not None:
-                    cur.execute("SELECT now()")
-                    current_time = cur.fetchone()[0]
-                    if lease_expires_at > current_time:
-                        conn.rollback()
-                        return False
-
-                cur.execute(
-                    """
-                    UPDATE agent_sessions
-                    SET claimed_by = %s,
-                        claimed_at = now(),
-                        lease_expires_at = now() + (%s * interval '1 second'),
-                        updated_at = now()
-                    WHERE session_id = %s
-                    """,
-                    (worker_id, lease_seconds, session_id),
-                )
-            conn.commit()
-        return True
+        return agent_session_store.claim_agent_session(self, session_id, worker_id, lease_seconds)
 
     def release_agent_session(self, session_id: str, worker_id: str) -> None:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE agent_sessions
-                    SET claimed_by = NULL,
-                        claimed_at = NULL,
-                        lease_expires_at = NULL,
-                        updated_at = now()
-                    WHERE session_id = %s AND claimed_by = %s
-                    """,
-                    (session_id, worker_id),
-                )
-            conn.commit()
+        agent_session_store.release_agent_session(self, session_id, worker_id)
 
     def attach_agent_profile_to_session(self, session_id: str, profile_id: str) -> None:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE agent_sessions
-                    SET profile_id = %s,
-                        auth_user_id = COALESCE(agent_sessions.auth_user_id, p.auth_user_id),
-                        updated_at = now()
-                    FROM agent_profiles p
-                    WHERE session_id = %s
-                      AND p.profile_id = %s
-                      AND p.tenant_id = agent_sessions.tenant_id
-                      AND (
-                        agent_sessions.auth_user_id IS NULL
-                        OR p.auth_user_id IS NULL
-                        OR agent_sessions.auth_user_id = p.auth_user_id
-                      )
-                    """,
-                    (profile_id, session_id, profile_id),
-                )
-                if cur.rowcount == 0:
-                    raise ValueError("Profile tenant mismatch")
-            conn.commit()
+        agent_session_store.attach_agent_profile_to_session(self, session_id, profile_id)
 
     def get_agent_session(self, session_id: str, tenant_id: str | None = None) -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                clauses = ["session_id = %s"]
-                params: list[object] = [session_id]
-                if tenant_id is not None:
-                    clauses.append("tenant_id = %s")
-                    params.append(tenant_id)
-                cur.execute(
-                    f"""
-                    SELECT
-                      session_id,
-                      tenant_id,
-                      auth_user_id,
-                      profile_id,
-                      workspace_kind,
-                      title,
-                      status,
-                      lease_expires_at AS leased_until,
-                      created_at,
-                      updated_at
-                    FROM agent_sessions
-                    WHERE {' AND '.join(clauses)}
-                    """,
-                    tuple(params),
-                )
-                row = cur.fetchone()
-                return dict(row) if row else None
+        return agent_session_store.get_agent_session(self, session_id, tenant_id=tenant_id)
 
     def get_agent_session_memory(
         self,
@@ -6388,38 +5037,13 @@ class Repository:
         auth_user_id: str | None = None,
         profile_id: str | None = None,
     ) -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                clauses = ["m.session_id = %s"]
-                params: list[object] = [session_id]
-                if tenant_id is not None:
-                    clauses.append("s.tenant_id = %s")
-                    params.append(tenant_id)
-                if auth_user_id is not None:
-                    clauses.append("s.auth_user_id = %s")
-                    params.append(self._sanitize_text(auth_user_id))
-                if profile_id is not None:
-                    clauses.append("s.profile_id = %s")
-                    params.append(profile_id)
-                cur.execute(
-                    f"""
-                    SELECT
-                      m.session_id,
-                      m.summary_json,
-                      m.summary_text,
-                      m.source_provider,
-                      m.source_model,
-                      m.prompt_version,
-                      m.created_at,
-                      m.updated_at
-                    FROM agent_session_memories m
-                    JOIN agent_sessions s ON s.session_id = m.session_id
-                    WHERE {' AND '.join(clauses)}
-                    """,
-                    tuple(params),
-                )
-                row = cur.fetchone()
-                return dict(row) if row else None
+        return memory_store.get_agent_session_memory(
+            self,
+            session_id,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            profile_id=profile_id,
+        )
 
     def save_agent_session_memory(
         self,
@@ -6430,123 +5054,27 @@ class Repository:
         source_model: str,
         prompt_version: str,
     ) -> None:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT profile_id, auth_user_id FROM agent_sessions WHERE session_id = %s",
-                    (session_id,),
-                )
-                session_row = cur.fetchone()
-                if session_row is None:
-                    raise ValueError("Session not found")
-                profile_id, auth_user_id = session_row
-                cur.execute(
-                    """
-                    INSERT INTO agent_session_memories (
-                      session_id, profile_id, auth_user_id, summary_json, summary_text, source_provider, source_model, prompt_version
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (session_id) DO UPDATE SET
-                      profile_id = EXCLUDED.profile_id,
-                      auth_user_id = EXCLUDED.auth_user_id,
-                      summary_json = EXCLUDED.summary_json,
-                      summary_text = EXCLUDED.summary_text,
-                      source_provider = EXCLUDED.source_provider,
-                      source_model = EXCLUDED.source_model,
-                      prompt_version = EXCLUDED.prompt_version,
-                      updated_at = now()
-                    """,
-                    (
-                        session_id,
-                        profile_id,
-                        self._sanitize_text(str(auth_user_id or "")) or None,
-                        json.dumps(self._sanitize_json_value(summary_json)),
-                        self._sanitize_text(summary_text),
-                        self._sanitize_text(source_provider),
-                        self._sanitize_text(source_model),
-                        self._sanitize_text(prompt_version),
-                    ),
-                )
-            conn.commit()
+        memory_store.save_agent_session_memory(
+            self,
+            session_id,
+            summary_json,
+            summary_text,
+            source_provider,
+            source_model,
+            prompt_version,
+        )
 
     def update_agent_session_memory_record(self, session_id: str, patch: dict) -> dict | None:
-        assignments, params = self._build_allowed_patch(
-            patch,
-            allowed_fields={
-                "summary_json": "summary_json",
-                "summary_text": "summary_text",
-                "source_provider": "source_provider",
-                "source_model": "source_model",
-                "prompt_version": "prompt_version",
-            },
-            json_fields={"summary_json"},
-            text_fields={"summary_text", "source_provider", "source_model", "prompt_version"},
-        )
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    UPDATE agent_session_memories
-                    SET {", ".join(assignments)}, updated_at = now()
-                    WHERE session_id = %s
-                    RETURNING session_id, summary_json, summary_text, source_provider, source_model, prompt_version, created_at, updated_at
-                    """,
-                    tuple(params + [session_id]),
-                )
-                row = cur.fetchone()
-            conn.commit()
-        return dict(row) if row else None
+        return memory_store.update_agent_session_memory_record(self, session_id, patch)
 
     def update_agent_session(self, session_id: str, title: str | None = None, status: str | None = None) -> None:
-        assignments: list[str] = ["updated_at = now()"]
-        params: list[object] = []
-        if title is not None:
-            assignments.append("title = %s")
-            params.append(self._sanitize_text(title))
-        if status is not None:
-            assignments.append("status = %s")
-            params.append(status)
-        params.append(session_id)
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    UPDATE agent_sessions
-                    SET {", ".join(assignments)}
-                    WHERE session_id = %s
-                    """,
-                    tuple(params),
-                )
-            conn.commit()
+        agent_session_store.update_agent_session(self, session_id, title=title, status=status)
 
     def update_agent_session_record(self, session_id: str, patch: dict) -> dict | None:
-        assignments, params = self._build_allowed_patch(
-            patch,
-            allowed_fields={"title": "title", "status": "status", "profile_id": "profile_id", "auth_user_id": "auth_user_id"},
-            text_fields={"title", "status", "profile_id", "auth_user_id"},
-        )
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    UPDATE agent_sessions
-                    SET {", ".join(assignments)}, updated_at = now()
-                    WHERE session_id = %s
-                    RETURNING *
-                    """,
-                    tuple(params + [session_id]),
-                )
-                row = cur.fetchone()
-            conn.commit()
-        return dict(row) if row else None
+        return agent_session_store.update_agent_session_record(self, session_id, patch)
 
     def delete_agent_session(self, session_id: str) -> int:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM agent_sessions WHERE session_id = %s", (session_id,))
-                deleted = cur.rowcount
-            conn.commit()
-        return deleted
+        return agent_session_store.delete_agent_session(self, session_id)
 
     def delete_sensor_data_for_auth_user(self, auth_user_id: str, tenant_id: str = "shared") -> dict[str, int]:
         normalized_auth_user_id = self._sanitize_text(auth_user_id or "").strip()
@@ -6603,109 +5131,33 @@ class Repository:
         }
 
     def get_agent_runtime_config(self, tenant_id: str = "shared") -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT tenant_id, settings_json, updated_by, created_at, updated_at
-                    FROM agent_runtime_configs
-                    WHERE tenant_id = %s
-                    """,
-                    (tenant_id,),
-                )
-                row = cur.fetchone()
-                return dict(row) if row else None
+        return runtime_config_store.get_agent_runtime_config(self, tenant_id=tenant_id)
 
     def save_agent_runtime_config(self, tenant_id: str, settings_json: dict, updated_by: str = "admin") -> None:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO agent_runtime_configs (tenant_id, settings_json, updated_by)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (tenant_id) DO UPDATE SET
-                      settings_json = EXCLUDED.settings_json,
-                      updated_by = EXCLUDED.updated_by,
-                      updated_at = now()
-                    """,
-                    (
-                        tenant_id,
-                        json.dumps(self._sanitize_json_value(settings_json)),
-                        self._sanitize_text(updated_by),
-                    ),
-                )
-            conn.commit()
+        runtime_config_store.save_agent_runtime_config(
+            self,
+            tenant_id=tenant_id,
+            settings_json=settings_json,
+            updated_by=updated_by,
+        )
 
     def save_agent_runtime_secret(self, tenant_id: str, api_key_override: str, updated_by: str = "admin") -> None:
-        encrypted_value = self._encrypt_runtime_secret(api_key_override)
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO agent_runtime_secrets (tenant_id, api_key_override, updated_by)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (tenant_id) DO UPDATE SET
-                      api_key_override = EXCLUDED.api_key_override,
-                      updated_by = EXCLUDED.updated_by,
-                      updated_at = now()
-                    """,
-                    (
-                        tenant_id,
-                        encrypted_value,
-                        self._sanitize_text(updated_by),
-                    ),
-                )
-            conn.commit()
+        runtime_config_store.save_agent_runtime_secret(
+            self,
+            tenant_id=tenant_id,
+            api_key_override=api_key_override,
+            updated_by=updated_by,
+        )
 
     def delete_agent_runtime_config(self, tenant_id: str = "shared") -> int:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM agent_runtime_configs WHERE tenant_id = %s", (tenant_id,))
-                deleted = cur.rowcount
-            conn.commit()
-        return deleted
+        return runtime_config_store.delete_agent_runtime_config(self, tenant_id=tenant_id)
 
     def delete_agent_runtime_secret(self, tenant_id: str = "shared") -> int:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM agent_runtime_secrets WHERE tenant_id = %s", (tenant_id,))
-                deleted = cur.rowcount
-            conn.commit()
-        return deleted
+        return runtime_config_store.delete_agent_runtime_secret(self, tenant_id=tenant_id)
 
     def save_agent_message(self, session_id: str, role: str, content: str, metadata: dict | None = None) -> str:
-        message_id = str(uuid4())
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT profile_id, auth_user_id FROM agent_sessions WHERE session_id = %s",
-                    (session_id,),
-                )
-                session_row = cur.fetchone()
-                if session_row is None:
-                    raise ValueError("Session not found")
-                profile_id, auth_user_id = session_row
-                cur.execute(
-                    """
-                    INSERT INTO agent_messages (message_id, session_id, profile_id, auth_user_id, role, content, metadata_json)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        message_id,
-                        session_id,
-                        profile_id,
-                        self._sanitize_text(str(auth_user_id or "")) or None,
-                        role,
-                        self._sanitize_text(content),
-                        json.dumps(self._sanitize_json_value(metadata or {})),
-                    ),
-                )
-                cur.execute(
-                    "UPDATE agent_sessions SET updated_at = now() WHERE session_id = %s",
-                    (session_id,),
-                )
-            conn.commit()
-        return message_id
+        # Compatibility wrapper. New callers must use AgentMessageStore through services.
+        return agent_message_store.save_agent_message(self, session_id, role, content, metadata)
 
     def list_agent_messages(
         self,
@@ -6715,35 +5167,14 @@ class Repository:
         auth_user_id: str | None = None,
         profile_id: str | None = None,
     ) -> list[dict]:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                clauses = ["m.session_id = %s"]
-                params: list[object] = [session_id]
-                if tenant_id is not None:
-                    clauses.append("s.tenant_id = %s")
-                    params.append(tenant_id)
-                if auth_user_id is not None:
-                    clauses.append("s.auth_user_id = %s")
-                    params.append(self._sanitize_text(auth_user_id))
-                if profile_id is not None:
-                    clauses.append("s.profile_id = %s")
-                    params.append(profile_id)
-                cur.execute(
-                    f"""
-                    SELECT *
-                    FROM (
-                      SELECT m.message_id, m.session_id, m.role, m.content, m.metadata_json, m.created_at
-                      FROM agent_messages m
-                      JOIN agent_sessions s ON s.session_id = m.session_id
-                      WHERE {' AND '.join(clauses)}
-                      ORDER BY m.created_at DESC
-                      LIMIT %s
-                    ) recent_messages
-                    ORDER BY created_at ASC
-                    """,
-                    tuple(params + [limit]),
-                )
-                return [dict(row) for row in cur.fetchall()]
+        return agent_message_store.list_agent_messages(
+            self,
+            session_id,
+            limit=limit,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            profile_id=profile_id,
+        )
 
     def get_latest_agent_session_scope(
         self,
@@ -6752,35 +5183,13 @@ class Repository:
         auth_user_id: str | None = None,
         profile_id: str | None = None,
     ) -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                clauses = ["q.session_id = %s"]
-                params: list[object] = [session_id]
-                if tenant_id is not None:
-                    clauses.append("q.tenant_id = %s")
-                    params.append(tenant_id)
-                if auth_user_id is not None:
-                    clauses.append("q.auth_user_id = %s")
-                    params.append(self._sanitize_text(auth_user_id))
-                if profile_id is not None:
-                    clauses.append("q.profile_id = %s")
-                    params.append(profile_id)
-                cur.execute(
-                    f"""
-                    SELECT prompt_payload
-                    FROM agent_query_runs q
-                    WHERE {' AND '.join(clauses)}
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                    """,
-                    tuple(params),
-                )
-                row = cur.fetchone()
-                if row is None:
-                    return None
-                prompt_payload = dict(row.get("prompt_payload") or {})
-                scope = prompt_payload.get("request_scope")
-                return dict(scope) if isinstance(scope, dict) else None
+        return agent_trace_store.get_latest_agent_session_scope(
+            self,
+            session_id,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            profile_id=profile_id,
+        )
 
     def save_agent_query_run(
         self,
@@ -6807,97 +5216,36 @@ class Repository:
         review_reason: str | None = None,
         corpus_snapshot_id: str | None = None,
     ) -> str:
-        query_run_id = str(uuid4())
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                profile_id = None
-                auth_user_id = None
-                if session_id:
-                    cur.execute(
-                        "SELECT profile_id, auth_user_id FROM agent_sessions WHERE session_id = %s",
-                        (session_id,),
-                    )
-                    session_row = cur.fetchone()
-                    if session_row is None:
-                        raise ValueError("Session not found")
-                    profile_id, auth_user_id = session_row
-                cur.execute(
-                    """
-                    INSERT INTO agent_query_runs (
-                      query_run_id, session_id, profile_id, auth_user_id, tenant_id, question, normalized_query, question_type,
-                      retrieval_mode, status, answer, confidence, abstained, abstain_reason,
-                      provider, model, prompt_version, metrics_json, error_message,
-                      prompt_payload, raw_response_payload, final_response_payload,
-                      review_status, review_reason, corpus_snapshot_id
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        query_run_id,
-                        session_id,
-                        profile_id,
-                        self._sanitize_text(str(auth_user_id or "")) or None,
-                        tenant_id,
-                        self._sanitize_text(question),
-                        self._sanitize_text(normalized_query),
-                        question_type,
-                        retrieval_mode,
-                        status,
-                        self._sanitize_text(answer or ""),
-                        confidence,
-                        abstained,
-                        self._sanitize_text(abstain_reason or ""),
-                        provider,
-                        model,
-                        prompt_version,
-                        json.dumps(self._redact_sensitive_json_value(metrics or {})),
-                        self._sanitize_text(error_message or ""),
-                        json.dumps(self._redact_sensitive_json_value(prompt_payload or {})),
-                        json.dumps(self._redact_sensitive_json_value(raw_response_payload or {})),
-                        json.dumps(self._redact_sensitive_json_value(final_response_payload or {})),
-                        review_status,
-                        self._sanitize_text(review_reason or ""),
-                        corpus_snapshot_id,
-                    ),
-                )
-                if session_id:
-                    cur.execute(
-                        "UPDATE agent_sessions SET updated_at = now() WHERE session_id = %s",
-                        (session_id,),
-                    )
-            conn.commit()
-        return query_run_id
+        # Compatibility wrapper. New callers must use AgentTraceStore through services.
+        return agent_trace_store.save_agent_query_run(
+            self,
+            session_id,
+            tenant_id,
+            question,
+            normalized_query,
+            question_type,
+            retrieval_mode,
+            status,
+            answer,
+            confidence,
+            abstained,
+            abstain_reason,
+            provider,
+            model,
+            prompt_version,
+            metrics=metrics,
+            error_message=error_message,
+            prompt_payload=prompt_payload,
+            raw_response_payload=raw_response_payload,
+            final_response_payload=final_response_payload,
+            review_status=review_status,
+            review_reason=review_reason,
+            corpus_snapshot_id=corpus_snapshot_id,
+        )
 
     def save_agent_query_sources(self, query_run_id: str, sources: list[dict], corpus_snapshot_id: str | None = None) -> None:
-        if not sources:
-            return
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                for source in sources:
-                    cur.execute(
-                        """
-                        INSERT INTO agent_query_sources (
-                          query_run_id, source_kind, source_id, document_id, chunk_id, assertion_id, entity_id,
-                          rank, score, selected, payload, corpus_snapshot_id
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """,
-                        (
-                            query_run_id,
-                            source.get("source_kind"),
-                            source.get("source_id"),
-                            source.get("document_id"),
-                            source.get("chunk_id"),
-                            source.get("assertion_id"),
-                            source.get("entity_id"),
-                            source.get("rank"),
-                            source.get("score"),
-                            bool(source.get("selected", False)),
-                            json.dumps(self._redact_sensitive_json_value(source.get("payload", {}))),
-                            corpus_snapshot_id,
-                        ),
-                    )
-            conn.commit()
+        # Compatibility wrapper. New callers must use AgentTraceStore through services.
+        agent_trace_store.save_agent_query_sources(self, query_run_id, sources, corpus_snapshot_id=corpus_snapshot_id)
 
     def persist_agent_turn(
         self,
@@ -7067,22 +5415,13 @@ class Repository:
         auth_user_id: str | None = None,
         workspace_kind: str | None = None,
     ) -> int:
-        clauses: list[str] = []
-        params: list[object] = []
-        if tenant_id:
-            clauses.append("tenant_id = %s")
-            params.append(tenant_id)
-        if auth_user_id:
-            clauses.append("auth_user_id = %s")
-            params.append(auth_user_id)
-        if workspace_kind:
-            clauses.append("workspace_kind = %s")
-            params.append(workspace_kind)
-        if status:
-            clauses.append("status = %s")
-            params.append(status)
-        where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        return self._fetch_scalar(f"SELECT COUNT(*) AS value FROM agent_sessions {where_clause}", tuple(params))
+        return agent_session_store.count_agent_sessions(
+            self,
+            status=status,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            workspace_kind=workspace_kind,
+        )
 
     def list_agent_sessions(
         self,
@@ -7093,69 +5432,15 @@ class Repository:
         auth_user_id: str | None = None,
         workspace_kind: str | None = None,
     ) -> list[dict]:
-        clauses: list[str] = []
-        params: list[object] = []
-        if tenant_id:
-            clauses.append("s.tenant_id = %s")
-            params.append(tenant_id)
-        if auth_user_id:
-            clauses.append("s.auth_user_id = %s")
-            params.append(auth_user_id)
-        if workspace_kind:
-            clauses.append("s.workspace_kind = %s")
-            params.append(workspace_kind)
-        if status:
-            clauses.append("s.status = %s")
-            params.append(status)
-        where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        params.extend([limit, offset])
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT
-                      s.session_id,
-                      s.tenant_id,
-                      s.auth_user_id,
-                      s.profile_id,
-                      s.workspace_kind,
-                      s.title,
-                      s.status,
-                      s.claimed_by,
-                      s.claimed_at,
-                      s.lease_expires_at,
-                      s.created_at,
-                      s.updated_at,
-                      COALESCE(message_counts.message_count, 0) AS message_count,
-                      COALESCE(query_counts.query_count, 0) AS query_count,
-                      latest_message.content AS last_message_content,
-                      latest_message.role AS last_message_role,
-                      latest_message.created_at AS last_message_at
-                    FROM agent_sessions s
-                    LEFT JOIN LATERAL (
-                      SELECT COUNT(*)::integer AS message_count
-                      FROM agent_messages m
-                      WHERE m.session_id = s.session_id
-                    ) message_counts ON TRUE
-                    LEFT JOIN LATERAL (
-                      SELECT COUNT(*)::integer AS query_count
-                      FROM agent_query_runs q
-                      WHERE q.session_id = s.session_id
-                    ) query_counts ON TRUE
-                    LEFT JOIN LATERAL (
-                      SELECT m.content, m.role, m.created_at
-                      FROM agent_messages m
-                      WHERE m.session_id = s.session_id
-                      ORDER BY m.created_at DESC
-                      LIMIT 1
-                    ) latest_message ON TRUE
-                    {where_clause}
-                    ORDER BY s.updated_at DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    tuple(params),
-                )
-                return [dict(row) for row in cur.fetchall()]
+        return agent_session_store.list_agent_sessions(
+            self,
+            status=status,
+            limit=limit,
+            offset=offset,
+            tenant_id=tenant_id,
+            auth_user_id=auth_user_id,
+            workspace_kind=workspace_kind,
+        )
 
     def count_agent_query_runs(
         self,
@@ -7167,31 +5452,16 @@ class Repository:
         auth_user_id: str | None = None,
         profile_id: str | None = None,
     ) -> int:
-        clauses: list[str] = []
-        params: list[object] = []
-        if session_id:
-            clauses.append("session_id = %s")
-            params.append(session_id)
-        if tenant_id:
-            clauses.append("tenant_id = %s")
-            params.append(tenant_id)
-        if auth_user_id:
-            clauses.append("auth_user_id = %s")
-            params.append(self._sanitize_text(auth_user_id))
-        if profile_id:
-            clauses.append("profile_id = %s")
-            params.append(profile_id)
-        if status:
-            clauses.append("status = %s")
-            params.append(status)
-        if abstained is not None:
-            clauses.append("abstained = %s")
-            params.append(abstained)
-        if review_status:
-            clauses.append("review_status = %s")
-            params.append(review_status)
-        where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        return self._fetch_scalar(f"SELECT COUNT(*) AS value FROM agent_query_runs {where_clause}", tuple(params))
+        return agent_trace_store.count_agent_query_runs(
+            self,
+            session_id=session_id,
+            tenant_id=tenant_id,
+            status=status,
+            abstained=abstained,
+            review_status=review_status,
+            auth_user_id=auth_user_id,
+            profile_id=profile_id,
+        )
 
     def list_agent_query_runs(
         self,
@@ -7205,69 +5475,18 @@ class Repository:
         limit: int = 100,
         offset: int = 0,
     ) -> list[dict]:
-        clauses: list[str] = []
-        params: list[object] = []
-        if session_id:
-            clauses.append("q.session_id = %s")
-            params.append(session_id)
-        if tenant_id:
-            clauses.append("q.tenant_id = %s")
-            params.append(tenant_id)
-        if auth_user_id:
-            clauses.append("q.auth_user_id = %s")
-            params.append(self._sanitize_text(auth_user_id))
-        if profile_id:
-            clauses.append("q.profile_id = %s")
-            params.append(profile_id)
-        if status:
-            clauses.append("q.status = %s")
-            params.append(status)
-        if abstained is not None:
-            clauses.append("q.abstained = %s")
-            params.append(abstained)
-        if review_status:
-            clauses.append("q.review_status = %s")
-            params.append(review_status)
-        where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        params.extend([limit, offset])
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT
-                      q.query_run_id,
-                      q.session_id,
-                      q.tenant_id,
-                      q.question,
-                      q.normalized_query,
-                      q.query_signature,
-                      q.query_keywords,
-                      q.question_type,
-                      q.retrieval_mode,
-                      q.status,
-                      q.confidence,
-                      q.abstained,
-                      q.abstain_reason,
-                      q.provider,
-                      q.model,
-                      q.prompt_version,
-                      q.review_status,
-                      q.review_reason,
-                      q.reviewed_at,
-                      q.reviewed_by,
-                      q.corpus_snapshot_id,
-                      q.metrics_json,
-                      q.created_at,
-                      s.title AS session_title
-                    FROM agent_query_runs q
-                    LEFT JOIN agent_sessions s ON s.session_id = q.session_id
-                    {where_clause}
-                    ORDER BY q.created_at DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    tuple(params),
-                )
-                return [dict(row) for row in cur.fetchall()]
+        return agent_trace_store.list_agent_query_runs(
+            self,
+            session_id=session_id,
+            tenant_id=tenant_id,
+            status=status,
+            abstained=abstained,
+            review_status=review_status,
+            auth_user_id=auth_user_id,
+            profile_id=profile_id,
+            limit=limit,
+            offset=offset,
+        )
 
     def get_agent_query_detail(
         self,
@@ -7277,156 +5496,14 @@ class Repository:
         auth_user_id: str | None = None,
         profile_id: str | None = None,
     ) -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                clauses = ["q.query_run_id = %s"]
-                params: list[object] = [query_run_id]
-                if tenant_id:
-                    clauses.append("q.tenant_id = %s")
-                    params.append(tenant_id)
-                if session_id:
-                    clauses.append("q.session_id = %s")
-                    params.append(session_id)
-                if auth_user_id:
-                    clauses.append("q.auth_user_id = %s")
-                    params.append(self._sanitize_text(auth_user_id))
-                if profile_id:
-                    clauses.append("q.profile_id = %s")
-                    params.append(profile_id)
-                cur.execute(
-                    f"""
-                    SELECT q.*, s.title AS session_title, s.status AS session_status, s.profile_id
-                    FROM agent_query_runs q
-                    LEFT JOIN agent_sessions s ON s.session_id = q.session_id
-                    WHERE {' AND '.join(clauses)}
-                    """,
-                    tuple(params),
-                )
-                run = cur.fetchone()
-                if run is None:
-                    return None
-
-                cur.execute(
-                    """
-                    SELECT
-                      source_link_id,
-                      query_run_id,
-                      source_kind,
-                      source_id,
-                      document_id,
-                      chunk_id,
-                      assertion_id,
-                      entity_id,
-                      rank,
-                      score,
-                      selected,
-                      payload,
-                      corpus_snapshot_id,
-                      created_at
-                    FROM agent_query_sources
-                    WHERE query_run_id = %s
-                    ORDER BY selected DESC, rank NULLS LAST, created_at ASC
-                    """,
-                    (query_run_id,),
-                )
-                sources = [dict(row) for row in cur.fetchall()]
-
-                cur.execute(
-                    """
-                    SELECT review_id, query_run_id, decision, reviewer, notes, payload, created_at
-                    FROM agent_answer_reviews
-                    WHERE query_run_id = %s
-                    ORDER BY created_at DESC
-                    """,
-                    (query_run_id,),
-                )
-                reviews = [dict(row) for row in cur.fetchall()]
-
-                pattern = None
-                session_memory = None
-                profile = None
-                tenant_id = str(run.get("tenant_id") or "shared")
-                query_signature = str(run.get("query_signature") or "")
-                session_id = run.get("session_id")
-                run_profile_id = str(run.get("profile_id") or "")
-                if session_id:
-                    memory_clauses = ["session_id = %s"]
-                    memory_params: list[object] = [session_id]
-                    if auth_user_id:
-                        memory_clauses.append("auth_user_id = %s")
-                        memory_params.append(self._sanitize_text(auth_user_id))
-                    if profile_id:
-                        memory_clauses.append("profile_id = %s")
-                        memory_params.append(profile_id)
-                    cur.execute(
-                        f"""
-                        SELECT session_id, summary_json, summary_text, source_provider, source_model, prompt_version, created_at, updated_at
-                        FROM agent_session_memories
-                        WHERE {' AND '.join(memory_clauses)}
-                        """,
-                        tuple(memory_params),
-                    )
-                    session_memory_row = cur.fetchone()
-                    session_memory = dict(session_memory_row) if session_memory_row else None
-                if run_profile_id:
-                    cur.execute(
-                        """
-                        SELECT
-                          profile_id,
-                          tenant_id,
-                          display_name,
-                          status,
-                          summary_json,
-                          summary_text,
-                          source_provider,
-                          source_model,
-                          prompt_version,
-                          created_at,
-                          updated_at
-                        FROM agent_profiles
-                        WHERE profile_id = %s
-                        """,
-                        (run_profile_id,),
-                    )
-                    profile_row = cur.fetchone()
-                    profile = dict(profile_row) if profile_row else None
-                if query_signature:
-                    cur.execute(
-                        """
-                        SELECT
-                          tenant_id,
-                          pattern_signature,
-                          keywords_json,
-                          example_query,
-                          approved_count,
-                          rejected_count,
-                          needs_review_count,
-                          total_feedback_count,
-                          router_cache_json,
-                          router_cached_at,
-                          router_cache_hits,
-                          router_model,
-                          last_query_run_id,
-                          last_feedback_at,
-                          last_feedback_by,
-                          created_at,
-                          updated_at
-                        FROM agent_query_patterns
-                        WHERE tenant_id = %s AND pattern_signature = %s
-                        """,
-                        (tenant_id, query_signature),
-                    )
-                    pattern_row = cur.fetchone()
-                    pattern = dict(pattern_row) if pattern_row else None
-
-        return {
-            "query_run": self._redact_sensitive_json_value(dict(run)),
-            "sources": [self._redact_sensitive_json_value(item) for item in sources],
-            "reviews": [self._redact_sensitive_json_value(item) for item in reviews],
-            "pattern": self._redact_sensitive_json_value(pattern) if pattern is not None else None,
-            "session_memory": self._redact_sensitive_json_value(session_memory) if session_memory is not None else None,
-            "profile": self._redact_sensitive_json_value(profile) if profile is not None else None,
-        }
+        return agent_trace_store.get_agent_query_detail(
+            self,
+            query_run_id,
+            tenant_id=tenant_id,
+            session_id=session_id,
+            auth_user_id=auth_user_id,
+            profile_id=profile_id,
+        )
 
     def list_documents_by_ids(self, document_ids: list[str]) -> list[dict]:
         if not document_ids:
@@ -7529,100 +5606,16 @@ class Repository:
         tenant_id: str | None = None,
         session_id: str | None = None,
     ) -> None:
-        decision = self._sanitize_text(decision or "").strip().lower()
-        reviewer = self._sanitize_text(reviewer or "admin").strip() or "admin"
-        if decision not in ALLOWED_AGENT_REVIEW_DECISIONS:
-            raise ValueError("Invalid review decision")
-        is_quality_judgment = reviewer != "user-ui"
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                clauses = ["query_run_id = %s"]
-                params: list[object] = [query_run_id]
-                if tenant_id:
-                    clauses.append("tenant_id = %s")
-                    params.append(tenant_id)
-                if session_id:
-                    clauses.append("session_id = %s")
-                    params.append(session_id)
-                cur.execute(
-                    f"""
-                    SELECT tenant_id, question, normalized_query, query_signature, query_keywords
-                    FROM agent_query_runs
-                    WHERE {' AND '.join(clauses)}
-                    """,
-                    tuple(params),
-                )
-                run = cur.fetchone()
-                if run is None:
-                    raise ValueError("Agent query run not found")
-                tenant_id = str(run["tenant_id"] or "shared")
-                question = str(run["question"] or "")
-                normalized_query = str(run["normalized_query"] or "")
-                query_signature = str(run["query_signature"] or "")
-                query_keywords = list(run["query_keywords"] or [])
-                if not query_signature:
-                    query_signature, query_keywords = self._build_query_pattern(normalized_query)
-                    cur.execute(
-                        """
-                        UPDATE agent_query_runs
-                        SET query_signature = %s,
-                            query_keywords = %s
-                        WHERE query_run_id = %s
-                        """,
-                        (query_signature, json.dumps(query_keywords), query_run_id),
-                    )
-
-                cur.execute(
-                    """
-                    SELECT decision
-                    FROM agent_answer_reviews
-                    WHERE query_run_id = %s
-                      AND reviewer <> 'user-ui'
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                    """,
-                    (query_run_id,),
-                )
-                previous_review = cur.fetchone()
-                previous_decision = str(previous_review["decision"]) if previous_review else None
-
-                cur.execute(
-                    """
-                    INSERT INTO agent_answer_reviews (query_run_id, decision, reviewer, notes, payload)
-                    VALUES (%s, %s, %s, %s, %s)
-                    """,
-                    (
-                        query_run_id,
-                        decision,
-                        reviewer,
-                        self._sanitize_text(notes or ""),
-                        json.dumps(self._redact_sensitive_json_value(payload or {})),
-                    ),
-                )
-                if is_quality_judgment:
-                    cur.execute(
-                        """
-                        UPDATE agent_query_runs
-                        SET review_status = %s,
-                            review_reason = %s,
-                            reviewed_at = now(),
-                            reviewed_by = %s
-                        WHERE query_run_id = %s
-                        """,
-                        (decision, self._sanitize_text(notes or ""), reviewer, query_run_id),
-                    )
-                    self._apply_agent_query_pattern_feedback(
-                        cur=cur,
-                        tenant_id=tenant_id,
-                        query_signature=query_signature,
-                        query_keywords=query_keywords,
-                        example_query=question,
-                        previous_decision=previous_decision,
-                        decision=decision,
-                        reviewer=reviewer,
-                        query_run_id=query_run_id,
-                    )
-            conn.commit()
+        agent_feedback_store.save_agent_answer_review(
+            self,
+            query_run_id=query_run_id,
+            decision=decision,
+            reviewer=reviewer,
+            notes=notes,
+            payload=payload,
+            tenant_id=tenant_id,
+            session_id=session_id,
+        )
 
     def _apply_agent_query_pattern_feedback(
         self,
@@ -7706,159 +5699,22 @@ class Repository:
             )
 
     def list_agent_answer_reviews(self, decision: str | None = None, limit: int = 100, offset: int = 0) -> list[dict]:
-        clauses: list[str] = []
-        params: list[object] = []
-        if decision:
-            clauses.append("ar.decision = %s")
-            params.append(decision)
-        where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT
-                      ar.review_id,
-                      ar.query_run_id,
-                      ar.decision,
-                      ar.reviewer,
-                      ar.notes,
-                      ar.payload,
-                      ar.created_at,
-                      qr.question,
-                      qr.query_signature,
-                      qr.query_keywords,
-                      qr.session_id,
-                      qr.confidence,
-                      qr.abstained
-                    FROM agent_answer_reviews ar
-                    JOIN agent_query_runs qr ON qr.query_run_id = ar.query_run_id
-                    {where_clause}
-                    ORDER BY ar.created_at DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    tuple(params + [limit, offset]),
-                )
-                return [dict(row) for row in cur.fetchall()]
+        return agent_feedback_store.list_agent_answer_reviews(self, decision=decision, limit=limit, offset=offset)
 
     def count_agent_answer_reviews(self, decision: str | None = None) -> int:
-        clauses: list[str] = []
-        params: list[object] = []
-        if decision:
-            clauses.append("decision = %s")
-            params.append(decision)
-        where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        return self._fetch_scalar(f"SELECT COUNT(*) AS value FROM agent_answer_reviews {where_clause}", tuple(params))
+        return agent_feedback_store.count_agent_answer_reviews(self, decision=decision)
 
     def list_agent_query_patterns(self, tenant_id: str = "shared", search: str | None = None, limit: int = 50, offset: int = 0) -> list[dict]:
-        clauses: list[str] = ["tenant_id = %s"]
-        params: list[object] = [tenant_id]
-        if search:
-            clauses.append("(pattern_signature ILIKE %s OR example_query ILIKE %s)")
-            needle = f"%{search}%"
-            params.extend([needle, needle])
-        where_clause = "WHERE " + " AND ".join(clauses)
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT
-                      tenant_id,
-                      pattern_signature,
-                      keywords_json,
-                      example_query,
-                      approved_count,
-                      rejected_count,
-                      needs_review_count,
-                      total_feedback_count,
-                      router_cache_json,
-                      router_cached_at,
-                      router_cache_hits,
-                      router_model,
-                      last_query_run_id,
-                      last_feedback_at,
-                      last_feedback_by,
-                      created_at,
-                      updated_at
-                    FROM agent_query_patterns
-                    {where_clause}
-                    ORDER BY approved_count DESC, total_feedback_count DESC, updated_at DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    tuple(params + [limit, offset]),
-                )
-                return [dict(row) for row in cur.fetchall()]
+        return agent_trace_store.list_agent_query_patterns(self, tenant_id=tenant_id, search=search, limit=limit, offset=offset)
 
     def count_agent_query_patterns(self, tenant_id: str = "shared", search: str | None = None) -> int:
-        clauses: list[str] = ["tenant_id = %s"]
-        params: list[object] = [tenant_id]
-        if search:
-            clauses.append("(pattern_signature ILIKE %s OR example_query ILIKE %s)")
-            needle = f"%{search}%"
-            params.extend([needle, needle])
-        where_clause = "WHERE " + " AND ".join(clauses)
-        return self._fetch_scalar(f"SELECT COUNT(*) AS value FROM agent_query_patterns {where_clause}", tuple(params))
+        return agent_trace_store.count_agent_query_patterns(self, tenant_id=tenant_id, search=search)
 
     def get_agent_metrics(self) -> dict:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT
-                      COUNT(*) AS total_runs,
-                      COUNT(*) FILTER (WHERE abstained = true) AS abstentions,
-                      COUNT(*) FILTER (WHERE review_status = 'needs_review') AS needs_review,
-                      COUNT(*) FILTER (WHERE review_status = 'approved') AS approved,
-                      COUNT(*) FILTER (WHERE review_status = 'rejected') AS rejected,
-                      COUNT(*) FILTER (WHERE COALESCE(abstain_reason, '') = 'no_valid_citations') AS no_citation_answers,
-                      COALESCE(AVG(confidence), 0) AS avg_confidence,
-                      COALESCE(AVG(NULLIF(metrics_json->>'latency_ms', '')::numeric), 0) AS avg_latency_ms,
-                      COALESCE(MAX(NULLIF(metrics_json->>'latency_ms', '')::numeric), 0) AS max_latency_ms
-                    FROM agent_query_runs
-                    """
-                )
-                row = dict(cur.fetchone() or {})
-                return {
-                    "total_runs": int(row.get("total_runs") or 0),
-                    "abstentions": int(row.get("abstentions") or 0),
-                    "needs_review": int(row.get("needs_review") or 0),
-                    "approved": int(row.get("approved") or 0),
-                    "rejected": int(row.get("rejected") or 0),
-                    "no_citation_answers": int(row.get("no_citation_answers") or 0),
-                    "avg_confidence": float(row.get("avg_confidence") or 0.0),
-                    "avg_latency_ms": float(row.get("avg_latency_ms") or 0.0),
-                    "max_latency_ms": float(row.get("max_latency_ms") or 0.0),
-                }
+        return agent_trace_store.get_agent_metrics(self)
 
     def get_agent_query_pattern(self, tenant_id: str, pattern_signature: str) -> dict | None:
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT
-                      tenant_id,
-                      pattern_signature,
-                      keywords_json,
-                      example_query,
-                      approved_count,
-                      rejected_count,
-                      needs_review_count,
-                      total_feedback_count,
-                      router_cache_json,
-                      router_cached_at,
-                      router_cache_hits,
-                      router_model,
-                      last_query_run_id,
-                      last_feedback_at,
-                      last_feedback_by,
-                      created_at,
-                      updated_at
-                    FROM agent_query_patterns
-                    WHERE tenant_id = %s AND pattern_signature = %s
-                    """,
-                    (tenant_id, pattern_signature),
-                )
-                row = cur.fetchone()
-                return dict(row) if row else None
+        return agent_trace_store.get_agent_query_pattern(self, tenant_id, pattern_signature)
 
     def get_cached_query_embedding(
         self,
@@ -7866,29 +5722,7 @@ class Repository:
         normalized_query: str,
         cache_identity: str,
     ) -> dict | None:
-        query_hash = self._query_hash(normalized_query)
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT
-                      tenant_id,
-                      query_hash,
-                      normalized_query,
-                      cache_identity,
-                      embedding_json,
-                      embedding_dimensions,
-                      cache_hits,
-                      cached_at,
-                      created_at,
-                      updated_at
-                    FROM agent_query_embeddings
-                    WHERE tenant_id = %s AND query_hash = %s AND cache_identity = %s
-                    """,
-                    (tenant_id, query_hash, self._sanitize_text(cache_identity)),
-                )
-                row = cur.fetchone()
-                return dict(row) if row else None
+        return agent_trace_store.get_cached_query_embedding(self, tenant_id, normalized_query, cache_identity)
 
     def save_cached_query_embedding(
         self,
@@ -7897,40 +5731,7 @@ class Repository:
         cache_identity: str,
         embedding: list[float],
     ) -> None:
-        query_hash = self._query_hash(normalized_query)
-        vector = [float(value) for value in embedding]
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO agent_query_embeddings (
-                      tenant_id,
-                      query_hash,
-                      normalized_query,
-                      cache_identity,
-                      embedding_json,
-                      embedding_dimensions,
-                      cache_hits,
-                      cached_at
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, 0, now())
-                    ON CONFLICT (tenant_id, query_hash, cache_identity) DO UPDATE SET
-                      normalized_query = EXCLUDED.normalized_query,
-                      embedding_json = EXCLUDED.embedding_json,
-                      embedding_dimensions = EXCLUDED.embedding_dimensions,
-                      cached_at = EXCLUDED.cached_at,
-                      updated_at = now()
-                    """,
-                    (
-                        tenant_id,
-                        query_hash,
-                        self._sanitize_text(normalized_query),
-                        self._sanitize_text(cache_identity),
-                        Jsonb(vector),
-                        len(vector),
-                    ),
-                )
-            conn.commit()
+        agent_trace_store.save_cached_query_embedding(self, tenant_id, normalized_query, cache_identity, embedding)
 
     def touch_cached_query_embedding_hit(
         self,
@@ -7938,19 +5739,7 @@ class Repository:
         normalized_query: str,
         cache_identity: str,
     ) -> None:
-        query_hash = self._query_hash(normalized_query)
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE agent_query_embeddings
-                    SET cache_hits = cache_hits + 1,
-                        updated_at = now()
-                    WHERE tenant_id = %s AND query_hash = %s AND cache_identity = %s
-                    """,
-                    (tenant_id, query_hash, self._sanitize_text(cache_identity)),
-                )
-            conn.commit()
+        agent_trace_store.touch_cached_query_embedding_hit(self, tenant_id, normalized_query, cache_identity)
 
     def save_agent_query_pattern_route(
         self,
@@ -7961,108 +5750,24 @@ class Repository:
         route_payload: dict[str, Any],
         router_model: str,
     ) -> None:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO agent_query_patterns (
-                      tenant_id,
-                      pattern_signature,
-                      keywords_json,
-                      example_query,
-                      router_cache_json,
-                      router_cached_at,
-                      router_model,
-                      router_cache_hits
-                    )
-                    VALUES (%s, %s, %s, %s, %s, now(), %s, 0)
-                    ON CONFLICT (tenant_id, pattern_signature) DO UPDATE SET
-                      keywords_json = EXCLUDED.keywords_json,
-                      example_query = COALESCE(agent_query_patterns.example_query, EXCLUDED.example_query),
-                      router_cache_json = EXCLUDED.router_cache_json,
-                      router_cached_at = EXCLUDED.router_cached_at,
-                      router_model = EXCLUDED.router_model,
-                      updated_at = now()
-                    """,
-                    (
-                        tenant_id,
-                        pattern_signature,
-                        json.dumps(self._sanitize_json_value(query_keywords)),
-                        self._sanitize_text(example_query),
-                        json.dumps(self._sanitize_json_value(route_payload)),
-                        self._sanitize_text(router_model),
-                    ),
-                )
-            conn.commit()
+        agent_trace_store.save_agent_query_pattern_route(
+            self,
+            tenant_id,
+            pattern_signature,
+            query_keywords,
+            example_query,
+            route_payload,
+            router_model,
+        )
 
     def touch_agent_query_pattern_route_hit(self, tenant_id: str, pattern_signature: str) -> None:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE agent_query_patterns
-                    SET router_cache_hits = router_cache_hits + 1,
-                        updated_at = now()
-                    WHERE tenant_id = %s AND pattern_signature = %s
-                    """,
-                    (tenant_id, pattern_signature),
-                )
-            conn.commit()
+        agent_trace_store.touch_agent_query_pattern_route_hit(self, tenant_id, pattern_signature)
 
     def update_agent_query_pattern(self, tenant_id: str, pattern_signature: str, patch: dict) -> dict | None:
-        assignments, params = self._build_allowed_patch(
-            patch,
-            allowed_fields={
-                "keywords_json": "keywords_json",
-                "example_query": "example_query",
-                "approved_count": "approved_count",
-                "rejected_count": "rejected_count",
-                "needs_review_count": "needs_review_count",
-                "total_feedback_count": "total_feedback_count",
-                "last_query_run_id": "last_query_run_id",
-                "last_feedback_by": "last_feedback_by",
-            },
-            json_fields={"keywords_json"},
-            text_fields={"example_query", "last_query_run_id", "last_feedback_by"},
-        )
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    UPDATE agent_query_patterns
-                    SET {", ".join(assignments)}, updated_at = now()
-                    WHERE tenant_id = %s AND pattern_signature = %s
-                    RETURNING
-                      tenant_id,
-                      pattern_signature,
-                      keywords_json,
-                      example_query,
-                      approved_count,
-                      rejected_count,
-                      needs_review_count,
-                      total_feedback_count,
-                      last_query_run_id,
-                      last_feedback_at,
-                      last_feedback_by,
-                      created_at,
-                      updated_at
-                    """,
-                    tuple(params + [tenant_id, pattern_signature]),
-                )
-                row = cur.fetchone()
-            conn.commit()
-        return dict(row) if row else None
+        return agent_trace_store.update_agent_query_pattern(self, tenant_id, pattern_signature, patch)
 
     def delete_agent_query_pattern(self, tenant_id: str, pattern_signature: str) -> int:
-        with psycopg.connect(self.dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "DELETE FROM agent_query_patterns WHERE tenant_id = %s AND pattern_signature = %s",
-                    (tenant_id, pattern_signature),
-                )
-                deleted = cur.rowcount
-            conn.commit()
-        return deleted
+        return agent_trace_store.delete_agent_query_pattern(self, tenant_id, pattern_signature)
 
     def list_chunk_records_by_ids(self, chunk_ids: list[str]) -> list[dict]:
         if not chunk_ids:
