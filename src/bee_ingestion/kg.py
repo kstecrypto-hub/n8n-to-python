@@ -20,7 +20,7 @@ from typing import Any
 import httpx
 
 from src.bee_ingestion.models import Chunk, KGExtractionResult
-from src.bee_ingestion.settings import settings
+from src.bee_ingestion.settings import settings, workspace_root
 
 
 @dataclass(slots=True)
@@ -51,6 +51,10 @@ class KGExtractionError(RuntimeError):
 
 def load_ontology(path: str | None = None) -> Ontology:
     source_path = Path(path or settings.kg_ontology_path)
+    if not source_path.exists():
+        workspace_candidate = workspace_root() / "data" / source_path.name
+        if workspace_candidate.exists():
+            source_path = workspace_candidate
     if source_path.suffix.lower() == ".json":
         raw = json.loads(source_path.read_text(encoding="utf-8"))
         classes = set(raw.get("classes", []))
