@@ -3,6 +3,8 @@ import re
 
 import src.bee_ingestion.agent as agent_module
 from src.bee_ingestion.agent import AgentQueryError, AgentService
+from src.bee_ingestion.agent_runtime.prompt_builder import PromptBuilder
+from src.bee_ingestion.agent_runtime.verifier import AnswerVerifier
 from src.bee_ingestion.settings import settings
 
 
@@ -884,6 +886,136 @@ def test_claim_verifier_rejects_numeric_world_knowledge_support(monkeypatch) -> 
     assert result["claims"][0]["support_basis"] == "unsupported"
 
 
+def test_prompt_builder_builds_prompt_from_provided_context_only() -> None:
+    builder = PromptBuilder(
+        budget_profile_summary=lambda payload, budget: payload.get("summary_json") if payload else None,
+        budget_session_summary=lambda payload, budget: payload.get("summary_json") if payload else None,
+        filter_profile_summary=lambda payload, **kwargs: payload,
+        filter_session_summary=lambda payload, **kwargs: payload,
+        refresh_memory_summary=lambda payload: {**payload, "summary_text": "memory"},
+        refresh_profile_summary=lambda payload: {**payload, "summary_text": "profile"},
+        trusted_asset_grounding_text=lambda row: str(row.get("search_text") or ""),
+        trusted_sensor_grounding_text=lambda row: str(row.get("summary_text") or ""),
+        extract_citation_excerpt=lambda text, query, limit: str(text)[:limit],
+    )
+    bundle = agent_module.AgentContextBundle(
+        chunks=[
+            {
+                "chunk_id": "chunk-1",
+                "document_id": "doc-1",
+                "chunk_index": 0,
+                "page_start": 1,
+                "page_end": 1,
+                "metadata_json": {"section_title": "Honey", "chunk_role": "body"},
+                "text": "Worker bees convert nectar into honey.",
+            }
+        ],
+        assets=[],
+        sensor_rows=[],
+        assertions=[{"assertion_id": "a-1", "chunk_id": "chunk-1", "subject_entity_id": "bee", "predicate": "converts", "object_entity_id": None, "object_literal": "nectar into honey", "confidence": 0.9}],
+        evidence=[{"evidence_id": "ev-1", "assertion_id": "a-1", "excerpt": "Worker bees convert nectar into honey."}],
+        entities=[{"entity_id": "entity-1", "canonical_name": "Honey", "entity_type": "HiveProduct"}],
+        graph_chains=[],
+        sources=[],
+    )
+    prompt_bundle = builder.build_prompt_bundle(
+        question="How do bees make honey?",
+        normalized_query="How do bees make honey?",
+        prior_messages=[{"role": "user", "content": "previous"}],
+        profile_summary=None,
+        session_memory=None,
+        bundle=bundle,
+        question_type="procedure",
+        runtime_config=agent_module.coerce_agent_runtime_config(agent_module.default_agent_runtime_config()),
+        workspace_kind="general",
+    )
+
+    user_prompt = builder.build_user_prompt(
+        question="How do bees make honey?",
+        normalized_query="How do bees make honey?",
+        question_type="procedure",
+        prompt_bundle=prompt_bundle,
+    )
+
+    assert prompt_bundle.chunk_payload[0]["chunk_id"] == "chunk-1"
+    assert prompt_bundle.assertion_payload[0]["assertion_id"] == "a-1"
+    assert prompt_bundle.evidence_payload[0]["evidence_id"] == "ev-1"
+    assert '"chunk-1"' in user_prompt
+    assert "context_chunks:" in user_prompt
+
+
+def test_answer_verifier_rejects_unknown_citation_ids() -> None:
+    verifier = AnswerVerifier(
+        trusted_asset_grounding_text=lambda row: "",
+        sensor_grounding_series_text=lambda row: "",
+        call_json_payload=lambda **kwargs: {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "verdict": True,
+                                "supported_ratio": 1.0,
+                                "unsupported_claims": [],
+                                "claims": [
+                                    {
+                                        "claim": "Honey comes from nectar.",
+                                        "supported": True,
+                                        "evidence_ids": ["ev-missing"],
+                                        "support_basis": "evidence",
+                                    }
+                                ],
+                            }
+                        )
+                    }
+                }
+            ]
+        },
+        extract_message_content_fn=lambda body: body["choices"][0]["message"]["content"],
+    )
+    runtime_config = agent_module.coerce_agent_runtime_config(agent_module.default_agent_runtime_config())
+    runtime_config["api_key_override"] = "test-key"
+
+    result = verifier.verify_answer_claims_with_model(
+        answer="Honey comes from nectar.",
+        normalized_query="How do bees make honey?",
+        evidence_rows=[{"id": "ev-1", "text": "Worker bees collect nectar."}],
+        runtime_config=runtime_config,
+    )
+
+    assert result is not None
+    assert result["passed"] is False
+    assert result["unsupported_claims"] == ["Honey comes from nectar."]
+    assert result["claims"][0]["evidence_ids"] == []
+
+
+def test_answer_verifier_rejects_non_abstention_without_evidence() -> None:
+    verifier = AnswerVerifier(
+        trusted_asset_grounding_text=lambda row: "",
+        sensor_grounding_series_text=lambda row: "",
+        call_json_payload=lambda **kwargs: {},
+        extract_message_content_fn=lambda body: "",
+    )
+    result = verifier.verify_answer_grounding(
+        answer="Bees make honey from nectar.",
+        question_type="fact",
+        normalized_query="How do bees make honey?",
+        chunk_map={},
+        used_chunk_ids=[],
+        asset_map={},
+        used_asset_ids=[],
+        sensor_row_map={},
+        used_sensor_row_ids=[],
+        assertion_map={},
+        evidence_map={},
+        used_evidence_ids=[],
+        runtime_config=agent_module.coerce_agent_runtime_config(agent_module.default_agent_runtime_config()),
+    )
+
+    assert result["passed"] is False
+    assert result["method"] == "lexical_fallback"
+
+
 def test_derive_agent_review_state_keeps_lexical_fallback_reviewable() -> None:
     runtime_config = agent_module.coerce_agent_runtime_config(agent_module.default_agent_runtime_config())
     state, reason = agent_module._derive_agent_review_state(
@@ -906,6 +1038,15 @@ def test_derive_agent_review_state_keeps_lexical_fallback_reviewable() -> None:
 
     assert state == "needs_review"
     assert reason == "lexical_fallback"
+
+
+def test_agent_query_preserves_public_response_shape() -> None:
+    repository = FakeAgentRepository()
+    service = AgentService(repository=repository, store=FakeAgentStore(), embedder=FakeEmbedder())
+
+    result = service.query("How do bees produce honey?")
+
+    assert {"answer", "confidence", "abstained", "citations", "query_run_id", "session_id", "profile_id"}.issubset(result.keys())
 
 
 def test_derive_agent_review_state_marks_open_world_fallback_reviewable() -> None:

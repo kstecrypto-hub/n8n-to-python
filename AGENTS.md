@@ -35,3 +35,13 @@ A skill is a set of local instructions stored in a `SKILL.md` file. The skills b
 - Coordination:
   - Announce which skill or skills you are using and why in one short line.
   - If a skill cannot be applied cleanly, say so briefly and continue with the next-best approach.
+
+## Completion Discipline
+
+- Use only these final statuses for completion-gated work: `DONE`, `NOT DONE: code blockers remain`, or `NOT DONE: environment blocked`.
+- Do not report partial completion as success.
+- Required prompt items may not be deferred into a later cleanup list.
+- If a required item remains unresolved, the task is `NOT DONE: code blockers remain`.
+- Tests and checks requested in the prompt must run and pass before `DONE`.
+- Compatibility shims must include removal conditions.
+- Do not use completion wording such as "mostly done", "partially done", or "deferred but not blocker".
