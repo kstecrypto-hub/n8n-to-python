@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 
-ROOT = Path(r"E:\n8n to python")
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _python_imports(path: Path) -> set[str]:
@@ -227,6 +227,17 @@ def test_admin_extended_sections_is_composition_only() -> None:
 def test_architecture_completion_script_passes() -> None:
     result = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "verify_architecture_completion.py")],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_secret_scan_script_passes() -> None:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "scan_hardcoded_secrets.py"), "--list-tracked-env"],
         cwd=ROOT,
         text=True,
         capture_output=True,

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import ast
+import subprocess
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+ENV_IGNORE_PATTERNS = [".env", ".env.*", "*.env", "!.env.example"]
 
 
 def fail(message: str, failures: list[str]) -> None:
@@ -110,9 +112,35 @@ def check_guard_scripts(failures: list[str]) -> None:
     if not (ROOT / "scripts" / "scan_hardcoded_secrets.py").exists():
         fail("missing scripts/scan_hardcoded_secrets.py", failures)
     gitignore = read(".gitignore") if (ROOT / ".gitignore").exists() else ""
-    for pattern in [".env", ".env.*", "*.env", "!.env.example"]:
+    gitignore_lines = [line.strip() for line in gitignore.splitlines() if line.strip() and not line.strip().startswith("#")]
+    for pattern in ENV_IGNORE_PATTERNS:
         if pattern not in gitignore:
             fail(f".gitignore missing env pattern: {pattern}", failures)
+    if gitignore_lines[: len(ENV_IGNORE_PATTERNS)] != ENV_IGNORE_PATTERNS:
+        fail(".gitignore env policy must start with .env, .env.*, *.env, !.env.example", failures)
+
+
+def check_tracked_env_policy(failures: list[str]) -> None:
+    result = subprocess.run(
+        ["git", "ls-files"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        fail(f"unable to inspect tracked files for env policy: {result.stderr.strip()}", failures)
+        return
+    tracked_env_files = [
+        path
+        for path in result.stdout.splitlines()
+        if path == ".env" or path.startswith(".env.") or path.endswith(".env")
+    ]
+    unexpected = [path for path in tracked_env_files if path != ".env.example"]
+    if unexpected:
+        fail(f"env files are tracked unexpectedly: {', '.join(unexpected)}", failures)
+    if ".env.example" not in tracked_env_files:
+        fail(".env.example must remain tracked as the template env file", failures)
 
 
 def main() -> int:
@@ -121,6 +149,7 @@ def main() -> int:
     check_service_delegates(failures)
     check_frontend(failures)
     check_guard_scripts(failures)
+    check_tracked_env_policy(failures)
     if failures:
         print("Architecture completion check failed:")
         for failure in failures:

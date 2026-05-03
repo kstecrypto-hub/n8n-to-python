@@ -320,3 +320,35 @@ Compatibility shims still present:
 - `src/bee_ingestion/service.py` public compatibility methods remain for worker/API callers. Removal condition: callers use offline stage/pipeline entrypoints directly.
 - `src/bee_ingestion/http_api/dependencies.py` lazy proxies remain for dependency wiring and test seams. Removal condition: app composition can move to explicit dependency injection without breaking tests/imports.
 - `src/bee_ingestion/offline_pipeline/stages/legacy_ingest.py` remains for the transitional ingestion pipeline. Removal condition: the full ingestion flow is represented as named stages.
+
+Stabilization Guardrail Pass
+Status: DONE
+Date: 2026-05-03
+Scope:
+- Locked in the current architecture wins without moving product ownership.
+- Hardened repo-local checks so future changes fail mechanically instead of relying on prose.
+
+Stabilized invariants:
+- `src/bee_ingestion/api.py` remains a composition/compatibility entrypoint and must not regain old admin/control-plane helper residue.
+- `frontend/src/features/admin/AdminExtendedSections.tsx` remains a small dispatcher and must not become the admin application core again.
+- Listed offline maintenance methods in `src/bee_ingestion/service.py` remain delegates to named offline stage modules.
+- `scripts/scan_hardcoded_secrets.py` remains present and runnable.
+- Env-file policy remains `.env`, `.env.*`, `*.env`, `!.env.example`.
+- Only `.env.example` may be tracked as an env template.
+
+Checks enforcing this state:
+- `scripts/verify_architecture_completion.py`
+  - fails if known `api.py` residue returns
+  - fails if `AdminExtendedSections.tsx` exceeds the composition threshold
+  - fails if required `service.py` methods stop delegating to offline stages
+  - fails if the secret scan script is missing
+  - fails if `.gitignore` env policy changes or unexpected env files are tracked
+- `tests/test_architecture_boundaries.py`
+  - runs the architecture completion script
+  - runs the secret scan script
+  - keeps existing import-boundary checks in the normal pytest path
+
+Verification:
+- `python scripts/verify_architecture_completion.py` -> passed
+- `python scripts/scan_hardcoded_secrets.py --list-tracked-env` -> passed
+- `python -m pytest tests/test_architecture_boundaries.py` -> passed
